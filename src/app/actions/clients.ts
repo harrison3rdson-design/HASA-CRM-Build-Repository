@@ -39,7 +39,7 @@ export async function createContactAction(formData: FormData) {
   const clientId = requiredText(formData.get("client_id"), "Client");
   const payload = {
     client_id: clientId,
-    first_name: optionalText(formData.get("first_name")),
+    first_name: requiredText(formData.get("first_name"), "First name"),
     last_name: optionalText(formData.get("last_name")),
     title: optionalText(formData.get("title")),
     email: optionalText(formData.get("email")),
@@ -48,16 +48,15 @@ export async function createContactAction(formData: FormData) {
     is_primary: formData.get("is_primary") === "on",
     receives_proposals: formData.get("receives_proposals") !== null,
     receives_invoices: formData.get("receives_invoices") !== null,
+    notes: optionalText(formData.get("notes")),
   };
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("contacts")
-    .insert(payload)
-    .select("id")
-    .single();
+    .insert(payload);
 
   if (error) throw error;
   revalidatePath(`/clients/${clientId}`);
   revalidatePath("/clients");
-  return data.id as string;
+  redirect(`/clients/${clientId}`);
 }

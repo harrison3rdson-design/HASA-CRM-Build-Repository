@@ -1,5 +1,6 @@
 import { Panel } from "@/components/cards";
 import { DetailGrid, DetailItem } from "@/components/dialogs/details";
+import { ContactForm } from "@/components/forms/contact-form";
 import { getClientDetail } from "@/lib/data/detail-data";
 import { money } from "@/lib/ui/format";
 
@@ -29,6 +30,10 @@ export default async function ClientDetailPage({
       <Panel title="Contacts">
         <div className="table-wrap"><table><thead><tr><th>Name</th><th>Title</th><th>Email</th><th>Mobile</th><th>Primary</th></tr></thead>
         <tbody>{d.contacts.map((c:any)=><tr key={c.id}><td>{[c.first_name,c.last_name].filter(Boolean).join(" ")}</td><td>{c.title??"—"}</td><td>{c.email??"—"}</td><td>{c.mobile_phone??"—"}</td><td>{c.is_primary?"Yes":"No"}</td></tr>)}</tbody></table></div>
+      </Panel>
+
+      <Panel title="Add Contact">
+        <ContactForm clientId={clientId} />
       </Panel>
 
       <Panel title="Proposals">

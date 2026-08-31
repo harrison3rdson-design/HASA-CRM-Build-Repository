@@ -47,13 +47,13 @@ export default async function ProposalDetailPage({
         </Panel>
 
         <Panel title="Professional Fees">
-          <div className="table-wrap"><table><thead><tr><th>Description</th><th>Type</th><th>Amount</th></tr></thead>
-          <tbody>{d.fees.filter((f:any)=>f.proposal_revision_id===latest.id).map((f:any)=><tr key={f.id}><td>{f.description}</td><td>{f.billing_type}</td><td>{money(f.amount)}</td></tr>)}</tbody></table></div>
+          <div className="table-wrap"><table><thead><tr><th>Description</th><th>Hours</th><th>Hourly Rate</th><th>Amount</th></tr></thead>
+          <tbody>{d.fees.filter((f:any)=>f.proposal_revision_id===latest.id).map((f:any)=><tr key={f.id}><td>{f.description}</td><td>{Number(f.quantity)}</td><td>{money(f.rate)}</td><td>{money(f.amount)}</td></tr>)}</tbody></table></div>
         </Panel>
 
         <Panel title="Estimated Expenses">
-          <div className="table-wrap"><table><thead><tr><th>Category</th><th>Description</th><th>Rule</th><th>Estimate</th></tr></thead>
-          <tbody>{d.expenses.filter((e:any)=>e.proposal_revision_id===latest.id).map((e:any)=><tr key={e.id}><td>{e.category}</td><td>{e.description??"—"}</td><td>{e.billing_rule}</td><td>{money(e.estimated_amount)}</td></tr>)}</tbody></table></div>
+          <div className="table-wrap"><table><thead><tr><th>Category</th><th>Description</th><th>Qty</th><th>Unit</th><th>Unit Cost</th><th>Markup</th><th>Rule</th><th>Estimate</th></tr></thead>
+          <tbody>{d.expenses.filter((e:any)=>e.proposal_revision_id===latest.id).map((e:any)=><tr key={e.id}><td>{e.category}</td><td>{e.description??"—"}</td><td>{Number(e.estimated_quantity)}</td><td>{e.unit??"—"}</td><td>{money(e.estimated_rate)}</td><td>{Number(e.markup_percent)}%</td><td>{String(e.billing_rule).replaceAll("_", " ")}</td><td>{money(e.estimated_amount)}</td></tr>)}</tbody></table></div>
         </Panel>
       </> : null}
     </>

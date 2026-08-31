@@ -6,7 +6,11 @@ export function executedProposalHtml(data: any, signer: any) {
   ).join("");
 
   const fees = (data.fees ?? []).map((f:any) =>
-    `<tr><td>${escapeHtml(f.description)}</td><td>${money(f.amount)}</td></tr>`
+    `<tr><td>${escapeHtml(f.description)}</td><td>${escapeHtml(f.quantity)}</td><td>${money(f.rate)}</td><td>${money(f.amount)}</td></tr>`
+  ).join("");
+
+  const expenses = (data.expenses ?? []).map((e:any) =>
+    `<tr><td>${escapeHtml(e.category)}</td><td>${escapeHtml(e.description ?? "")}</td><td>${escapeHtml(e.estimated_quantity)} ${escapeHtml(e.unit ?? "")}</td><td>${money(e.estimated_rate)}</td><td>${money(e.estimated_amount)}</td></tr>`
   ).join("");
 
   return `<!doctype html><html><head><meta charset="utf-8"><style>
@@ -21,7 +25,8 @@ export function executedProposalHtml(data: any, signer: any) {
     <h2>${escapeHtml(data.proposal.project_name)}</h2>
     <p>Client: ${escapeHtml(data.proposal.client?.company_name ?? "")}</p>
     ${sections}
-    <h2>Professional Fees</h2><table>${fees}</table>
+    <h2>Professional Fees</h2><table><thead><tr><td>Description</td><td>Hours</td><td>Rate</td><td>Amount</td></tr></thead><tbody>${fees}</tbody></table>
+    <h2>Estimated Expenses</h2><table><thead><tr><td>Category</td><td>Description</td><td>Quantity</td><td>Unit Cost</td><td>Estimate</td></tr></thead><tbody>${expenses}</tbody></table>
     <p><strong>Professional Fee:</strong> ${money(data.revision.professional_fee)}<br>
     <strong>Estimated Expenses:</strong> ${money(data.revision.estimated_expenses)}<br>
     <strong>Estimated Total:</strong> ${money(data.revision.estimated_total)}<br>

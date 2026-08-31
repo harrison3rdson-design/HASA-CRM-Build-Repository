@@ -38,7 +38,10 @@ export default async function PublicProposalPage({
           <h2>Professional Fees</h2>
           <div className="public-table">
             {fees.map((f: any) => (
-              <div key={f.id}><span>{f.description}</span><strong>{money(f.amount)}</strong></div>
+              <div key={f.id}>
+                <span>{f.description}<small>{Number(f.quantity)} hours × {money(f.rate)}</small></span>
+                <strong>{money(f.amount)}</strong>
+              </div>
             ))}
           </div>
         </section>
@@ -47,7 +50,13 @@ export default async function PublicProposalPage({
           <h2>Estimated Expenses</h2>
           <div className="public-table">
             {expenses.map((e: any) => (
-              <div key={e.id}><span>{e.category}{e.description ? ` — ${e.description}` : ""}</span><strong>{money(e.estimated_amount)}</strong></div>
+              <div key={e.id}>
+                <span>
+                  {e.category}{e.description ? ` — ${e.description}` : ""}
+                  <small>{Number(e.estimated_quantity)} {e.unit ?? "unit(s)"} × {money(e.estimated_rate)}{Number(e.markup_percent) ? ` + ${Number(e.markup_percent)}%` : ""}</small>
+                </span>
+                <strong>{money(e.estimated_amount)}</strong>
+              </div>
             ))}
           </div>
         </section>

@@ -18,3 +18,4 @@ body{margin:0;background:var(--public-bg);color:var(--public-text);font-family:A
 .public-primary{width:100%;padding:14px;border:0;border-radius:10px;background:var(--public-brand);color:#fff;font-size:15px;font-weight:700}
 .public-status{padding-top:4px;color:var(--public-text)!important}
 @media(max-width:600px){.public-shell{padding:10px}.public-header{align-items:flex-start}.public-document,.public-acceptance-card{padding:17px}.public-document h1{font-size:22px}}
+.public-table small{display:block;margin-top:3px;color:var(--public-muted);font-size:11px;font-weight:400}

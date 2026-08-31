@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/server";
 import { requiredText, optionalText } from "@/lib/validation/common";
 
@@ -29,7 +30,7 @@ export async function createClientAction(formData: FormData) {
 
   if (error) throw error;
   revalidatePath("/clients");
-  void data;
+  redirect(`/clients/${data.id}`);
 }
 
 export async function createContactAction(formData: FormData) {

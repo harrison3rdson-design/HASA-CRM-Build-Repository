@@ -198,7 +198,7 @@ export async function updateProposalRevisionPaymentTermsAction(formData: FormDat
     .single();
 
   if (readError) throw readError;
-  if (revision.locked) throw new Error("Accepted proposal revision terms are locked and cannot be changed.");
+  if (revision.locked) throw new Error("Sent or accepted proposal revisions are locked and cannot be changed.");
 
   const { error: updateError } = await admin
     .from("proposal_revisions")

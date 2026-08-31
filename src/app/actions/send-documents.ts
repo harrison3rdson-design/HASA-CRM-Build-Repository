@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { createProposalShareLink, createAdditionalServiceShareLink } from "@/lib/public/share-links";
@@ -20,9 +21,21 @@ export async function sendProposalAction(input: {
   const admin = createAdminClient();
 
   const { data: proposal, error } = await admin.from("proposals").select(`
-    proposal_number,project_name,primary_contact:contacts(first_name,last_name,email,mobile_phone)
+    proposal_number,project_name,current_revision,status,primary_contact:contacts(first_name,last_name,email,mobile_phone)
   `).eq("id", input.proposalId).single();
   if (error) throw error;
+
+  const { data: revision, error: revisionError } = await admin
+    .from("proposal_revisions")
+    .select("proposal_id,revision_number,locked")
+    .eq("id", input.revisionId)
+    .single();
+  if (revisionError) throw revisionError;
+  if (revision.proposal_id !== input.proposalId || revision.revision_number !== proposal.current_revision) {
+    throw new Error("Only the current revision of this proposal can be sent.");
+  }
+  if (revision.locked) throw new Error("This proposal revision has already been sent and locked.");
+  if (proposal.status !== "draft") throw new Error("Only a draft proposal can be sent.");
 
   const { token } = await createProposalShareLink(input.revisionId);
   const url = `${appUrl()}/public/proposals/${token}`;
@@ -40,7 +53,19 @@ export async function sendProposalAction(input: {
     message: `Please review proposal ${proposal.proposal_number} for ${proposal.project_name}.`,
   });
 
-  await admin.from("proposals").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", input.proposalId);
+  const delivered = results.some((result) => result.status === "sent" || result.status === "delivered");
+  if (!delivered) {
+    throw new Error("The proposal was not delivered, so it remains editable and unlocked.");
+  }
+
+  const { data: lockedProposalId, error: lockError } = await admin.rpc("mark_proposal_revision_sent", {
+    p_revision_id: input.revisionId,
+  });
+  if (lockError) throw lockError;
+  if (lockedProposalId !== input.proposalId) throw new Error("The sent revision does not belong to this proposal.");
+
+  revalidatePath("/proposals");
+  revalidatePath(`/proposals/${input.proposalId}`);
   return { url, results };
 }
 

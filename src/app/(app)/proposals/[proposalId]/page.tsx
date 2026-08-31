@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Panel } from "@/components/cards";
 import { ProposalSummary } from "@/components/proposals/proposal-summary";
 import { CreateRevisionButton } from "@/components/proposals/revision-button";
+import { SendProposalButton } from "@/components/proposals/send-proposal-button";
 import { RevisionPaymentTermsForm } from "@/components/forms/revision-payment-terms-form";
 import { ProposalRevisionForm } from "@/components/forms/proposal-revision-form";
 import { getProposalDetail } from "@/lib/data/detail-data";
@@ -41,7 +42,7 @@ export default async function ProposalDetailPage({
   const { edit } = await searchParams;
   const d = await getProposalDetail(proposalId);
   const latest = d.revisions[0];
-  const showEditor = edit === "1" && latest && !latest.locked;
+  const showEditor = Boolean(latest && !latest.locked && edit !== "0");
   const laborLines = latest ? (d.fees as FeeRecord[])
     .filter((fee) => fee.proposal_revision_id === latest.id)
     .map((fee) => ({
@@ -69,18 +70,26 @@ export default async function ProposalDetailPage({
       <div className="page-heading">
         <div><h1>Proposal {d.proposal.proposal_number}</h1><p>{d.proposal.project_name}</p></div>
         <div className="button-row">
-          {latest && !latest.locked ? (
+          {latest && !latest.locked && !showEditor ? (
             <Link className="secondary-button" href={`/proposals/${proposalId}?edit=1`}>
               Edit Revision
             </Link>
+          ) : null}
+          {latest && !latest.locked ? (
+            <SendProposalButton
+              proposalId={proposalId}
+              revisionId={latest.id}
+              hasEmail={Boolean(d.proposal.primary_contact?.email)}
+              hasMobile={Boolean(d.proposal.primary_contact?.mobile_phone)}
+            />
           ) : null}
           <CreateRevisionButton proposalId={proposalId} />
         </div>
       </div>
 
-      {showEditor ? (
+      {showEditor && latest ? (
         <Panel title={`Edit Revision ${latest.revision_number}`}>
-          <p className="footnote">Changes apply only to this draft revision. Accepted revisions remain unchanged.</p>
+          <p className="footnote">This draft remains editable until it is sent. Sending permanently locks this revision.</p>
           <ProposalRevisionForm
             proposalId={proposalId}
             revision={{
@@ -106,7 +115,7 @@ export default async function ProposalDetailPage({
             locked={latest.locked}
           />
           <p className="footnote">
-            Accepted revisions are locked permanently. New revisions copy the prior revision’s terms and can be changed before acceptance.
+            Sent and accepted revisions are locked permanently. A new revision copies the prior terms and remains editable until it is sent.
           </p>
         </Panel>
       ) : null}

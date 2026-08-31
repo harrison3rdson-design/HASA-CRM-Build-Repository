@@ -60,7 +60,7 @@ export function ProposalRevisionForm({
 
       <div className="full button-row">
         <button className="primary-button" type="submit">Save Revision</button>
-        <Link className="secondary-button" href={`/proposals/${proposalId}`}>Cancel</Link>
+        <Link className="secondary-button" href={`/proposals/${proposalId}?edit=0`}>Cancel</Link>
       </div>
     </form>
   );

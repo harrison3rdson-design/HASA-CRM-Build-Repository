@@ -21,7 +21,7 @@ export function RevisionPaymentTermsForm({
       </label>
       <div className="full">
         <button className="primary-button" type="submit" disabled={locked}>
-          {locked ? "Accepted Terms Locked" : "Save Payment Terms"}
+          {locked ? "Terms Locked" : "Save Payment Terms"}
         </button>
       </div>
     </form>

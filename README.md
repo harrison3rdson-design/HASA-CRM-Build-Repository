@@ -2,6 +2,7 @@
 
 Phase 10 prepares the cumulative application for an actual staging deployment.
 
+
 It includes:
 - functional Twilio REST adapter
 - functional transactional email HTTPS adapter

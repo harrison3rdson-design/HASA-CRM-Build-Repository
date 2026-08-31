@@ -30,12 +30,21 @@ export async function createAuthenticatedServerClient() {
 }
 
 export async function requireUser() {
-  const supabase = await createAuthenticatedServerClient();
-  const { data, error } = await supabase.auth.getUser();
+  const { supabase, user } = await getCurrentUser();
 
-  if (error || !data.user) {
+  if (!user) {
     throw new Error("Authentication required.");
   }
 
-  return { supabase, authUser: data.user };
+  return { supabase, authUser: user };
+}
+
+export async function getCurrentUser() {
+  const supabase = await createAuthenticatedServerClient();
+  const { data, error } = await supabase.auth.getUser();
+
+  return {
+    supabase,
+    user: error ? null : data.user,
+  };
 }

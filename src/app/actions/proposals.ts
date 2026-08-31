@@ -210,6 +210,32 @@ export async function updateProposalRevisionPaymentTermsAction(formData: FormDat
   revalidatePath(`/proposals/${revision.proposal_id}`);
 }
 
+export async function updateProposalRevisionAction(formData: FormData) {
+  await requireUser();
+  const admin = createAdminClient();
+  const revisionId = requiredText(formData.get("revision_id"), "Proposal revision");
+  const paymentTerms = parsePaymentTerms(formData.get("payment_terms"));
+  const validityDays = numberValue(formData.get("validity_days"), "Validity days", { min: 1 });
+  const billingMethod = optionalText(formData.get("billing_method")) ?? "fixed_fee";
+  const { feeItems, expenseItems } = parseProposalItems(formData);
+
+  const { data: proposalId, error } = await admin.rpc("update_proposal_revision_draft", {
+    p_revision_id: revisionId,
+    p_payment_terms: paymentTerms,
+    p_validity_days: validityDays,
+    p_billing_method: billingMethod,
+    p_fee_items: feeItems,
+    p_expense_items: expenseItems,
+  });
+
+  if (error) throw error;
+  if (!proposalId) throw new Error("The proposal revision could not be saved.");
+
+  revalidatePath("/proposals");
+  revalidatePath(`/proposals/${proposalId}`);
+  redirect(`/proposals/${proposalId}`);
+}
+
 export async function createProposalRevisionAction(proposalId: string) {
   await requireUser();
   const admin = createAdminClient();
@@ -267,5 +293,6 @@ export async function createProposalRevisionAction(proposalId: string) {
     .eq("id", proposalId);
 
   revalidatePath("/proposals");
+  revalidatePath(`/proposals/${proposalId}`);
   return revision.id as string;
 }

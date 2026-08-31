@@ -1,0 +1,3 @@
+import {Panel} from "@/components/cards";
+const reports=[["Project Profitability","Authorized fee vs labor cost and actual expenses"],["Time Utilization","Billable vs non-billable time"],["Travel Budget vs Actual","Estimated vs actual travel"],["Accounts Receivable","Outstanding and past-due invoices"],["Unbilled Work","Time and expenses not yet invoiced"],["Client History","Proposal, project, invoice, payment, and document history"]];
+export default function Page(){return <><div className="page-heading"><div><h1>Reports</h1><p>Operational and financial reporting.</p></div></div><div className="report-grid">{reports.map(([n,d])=><Panel key={n} title={n}><p className="muted">{d}</p><button className="secondary-button">Open Report</button></Panel>)}</div></>}

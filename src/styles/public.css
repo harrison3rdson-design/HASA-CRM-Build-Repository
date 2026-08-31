@@ -1,0 +1,20 @@
+:root{--public-bg:#f5f6f7;--public-text:#1f2937;--public-muted:#667085;--public-border:#d9dee5;--public-brand:#20262d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--public-bg);color:var(--public-text);font-family:Arial,Helvetica,sans-serif}
+.public-shell{max-width:780px;margin:0 auto;padding:16px}
+.public-header{display:flex;justify-content:space-between;align-items:center;padding:18px 4px}
+.public-brand{display:grid}.public-brand strong{font-size:22px}.public-brand span{font-size:11px;color:var(--public-muted);letter-spacing:.06em}
+.public-meta{font-size:12px;color:var(--public-muted);text-align:right}
+.public-document,.public-acceptance-card{background:#fff;border:1px solid var(--public-border);border-radius:14px;padding:22px;margin-bottom:16px}
+.public-document h1{font-size:25px;margin:0 0 6px}.public-document h2{font-size:16px;margin:24px 0 8px}
+.public-muted{color:var(--public-muted)}.preline{white-space:pre-line}
+.public-table{display:grid}.public-table>div,.public-totals>div{display:flex;justify-content:space-between;gap:18px;padding:10px 0;border-bottom:1px solid var(--public-border)}
+.public-totals{margin-top:18px}.public-totals>div:last-child{font-size:17px}
+.public-acceptance-card{display:grid;gap:12px}.public-acceptance-card h2{margin:0}.public-acceptance-card p{margin:0;color:var(--public-muted)}
+.public-acceptance-card label{display:grid;gap:6px;font-size:12px;color:var(--public-muted)}
+.public-acceptance-card input{padding:12px;border:1px solid var(--public-border);border-radius:9px;font:inherit}
+.public-acceptance-card .accept-check{display:flex;align-items:flex-start;gap:8px;color:var(--public-text);line-height:1.4}
+.public-acceptance-card .accept-check input{margin-top:2px}
+.public-primary{width:100%;padding:14px;border:0;border-radius:10px;background:var(--public-brand);color:#fff;font-size:15px;font-weight:700}
+.public-status{padding-top:4px;color:var(--public-text)!important}
+@media(max-width:600px){.public-shell{padding:10px}.public-header{align-items:flex-start}.public-document,.public-acceptance-card{padding:17px}.public-document h1{font-size:22px}}

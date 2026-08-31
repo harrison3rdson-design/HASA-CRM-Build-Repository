@@ -1,0 +1,22 @@
+{
+  "static_checks": {
+    "package_json_parse": true,
+    "migration_count": 7,
+    "seed_no_generated_estimated_total_insert": true,
+    "public_proposal_has_client_id": true,
+    "generated_document_uses_sha256_hash": true,
+    "obsolete_source_proposal_revision_absent": true,
+    "logos_present": true,
+    "tsconfig_present": true
+  },
+  "migrations": [
+    "001_release1_foundation.sql",
+    "002_release1_operations_billing.sql",
+    "002a_storage_plan.sql",
+    "003_release1_documents_delivery.sql",
+    "004_release1_production_hardening.sql",
+    "005_release1_acceptance_delivery.sql",
+    "006_release1_phase9_hardening.sql"
+  ],
+  "runtime_build_validation": "Not completed in this environment; npm dependency installation exceeded the execution window. Must be run in staging/CI."
+}

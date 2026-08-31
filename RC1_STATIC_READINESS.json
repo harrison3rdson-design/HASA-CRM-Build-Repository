@@ -1,0 +1,9 @@
+{
+  "twilio_adapter_not_scaffold": true,
+  "email_adapter_not_scaffold": true,
+  "role_policy_present": true,
+  "staging_seed_present": true,
+  "sql_invariants_present": true,
+  "deployment_runbook_present": true,
+  "cumulative_logos_present": true
+}

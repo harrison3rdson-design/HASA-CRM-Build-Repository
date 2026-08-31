@@ -1,0 +1,14 @@
+-- Run after creating Supabase Storage buckets.
+-- Recommended private buckets:
+--   hasa-documents
+--   hasa-receipts
+--
+-- Suggested object paths:
+-- clients/{client-id}/projects/{project-id}/proposals/...
+-- clients/{client-id}/projects/{project-id}/invoices/...
+-- clients/{client-id}/projects/{project-id}/additional-services/...
+-- clients/{client-id}/projects/{project-id}/expenses/{expense-id}/...
+-- receipt-inbox/{user-id}/{uuid}/original-file.ext
+--
+-- Do NOT make these buckets public.
+-- Access should be via authenticated policies or short-lived signed URLs.

@@ -101,7 +101,6 @@ function parseProposalItems(formData: FormData) {
 export async function createProposalAction(formData: FormData) {
   const { supabase, authUser } = await requireUser();
 
-  const proposalNumber = requiredText(formData.get("proposal_number"), "Proposal number");
   const clientId = requiredText(formData.get("client_id"), "Client");
   const projectName = requiredText(formData.get("project_name"), "Project name");
   const { feeItems, expenseItems, professionalFee, estimatedExpenses } = parseProposalItems(formData);
@@ -120,7 +119,6 @@ export async function createProposalAction(formData: FormData) {
   const { data: proposal, error: proposalError } = await supabase
     .from("proposals")
     .insert({
-      proposal_number: proposalNumber,
       client_id: clientId,
       primary_contact_id: optionalText(formData.get("primary_contact_id")),
       project_name: projectName,
@@ -128,7 +126,7 @@ export async function createProposalAction(formData: FormData) {
       status: "draft",
       current_revision: 1,
     })
-    .select("id")
+    .select("id,proposal_number")
     .single();
 
   if (proposalError) throw proposalError;

@@ -1,6 +1,7 @@
 node_modules/
 .next/
 .pnpm-store/
+supabase/.temp/
 *.tsbuildinfo
 .env*
 !.env.example

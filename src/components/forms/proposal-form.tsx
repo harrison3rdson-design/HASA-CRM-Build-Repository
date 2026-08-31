@@ -102,7 +102,8 @@ export function ProposalForm({
     <form action={createProposalAction} className="form-grid">
       <label>
         Proposal Number
-        <input name="proposal_number" placeholder="20260152" required />
+        <input value="Assigned automatically when saved" readOnly aria-describedby="proposal-number-help" />
+        <span id="proposal-number-help">Annual sequence: YYYY0151, YYYY0152, YYYY0153…</span>
       </label>
       <label>
         Client

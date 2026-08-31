@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Panel } from "@/components/cards";
 import { ProposalSummary } from "@/components/proposals/proposal-summary";
 import { CreateRevisionButton } from "@/components/proposals/revision-button";
+import { DeleteRevisionButton } from "@/components/proposals/delete-revision-button";
 import { SendProposalButton } from "@/components/proposals/send-proposal-button";
 import { RevisionPaymentTermsForm } from "@/components/forms/revision-payment-terms-form";
 import { ProposalRevisionForm } from "@/components/forms/proposal-revision-form";
@@ -83,6 +84,12 @@ export default async function ProposalDetailPage({
               hasMobile={Boolean(d.proposal.primary_contact?.mobile_phone)}
             />
           ) : null}
+          {latest && !latest.locked && latest.revision_number > 1 ? (
+            <DeleteRevisionButton
+              proposalId={proposalId}
+              revisionNumber={latest.revision_number}
+            />
+          ) : null}
           <CreateRevisionButton proposalId={proposalId} />
         </div>
       </div>
@@ -116,6 +123,7 @@ export default async function ProposalDetailPage({
           />
           <p className="footnote">
             Sent and accepted revisions are locked permanently. A new revision copies the prior terms and remains editable until it is sent.
+            Unlocked revisions can be deleted in reverse order, beginning with the latest revision. Revision 1 is retained as the proposal’s base revision.
           </p>
         </Panel>
       ) : null}

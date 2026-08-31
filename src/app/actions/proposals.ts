@@ -296,3 +296,22 @@ export async function createProposalRevisionAction(proposalId: string) {
   revalidatePath(`/proposals/${proposalId}`);
   return revision.id as string;
 }
+
+export async function deleteLatestProposalRevisionAction(proposalId: string) {
+  await requireUser();
+  const admin = createAdminClient();
+
+  const { data: currentRevision, error } = await admin.rpc(
+    "delete_latest_unlocked_proposal_revision",
+    { p_proposal_id: proposalId }
+  );
+
+  if (error) throw error;
+  if (!Number.isInteger(currentRevision)) {
+    throw new Error("The proposal revision could not be deleted.");
+  }
+
+  revalidatePath("/proposals");
+  revalidatePath(`/proposals/${proposalId}`);
+  return currentRevision as number;
+}

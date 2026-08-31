@@ -1,0 +1,10 @@
+.summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.summary-grid>div{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;display:grid;gap:5px}
+.summary-grid span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.summary-grid strong{font-size:18px}
+.detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0}
+.detail-grid div{display:grid;grid-template-columns:120px 1fr;gap:8px}.detail-grid dt{color:var(--muted);font-size:12px}.detail-grid dd{margin:0}
+.scope-block{padding:8px 0 16px;border-bottom:1px solid var(--border)}.scope-block:last-child{border-bottom:0}.scope-block h3{font-size:14px;margin:0 0 8px}
+.capitalize{text-transform:capitalize}
+@media(max-width:900px){.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.summary-grid,.detail-grid{grid-template-columns:1fr}.detail-grid div{grid-template-columns:1fr}}

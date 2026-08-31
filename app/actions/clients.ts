@@ -33,6 +33,38 @@ export async function createClientAction(formData: FormData) {
   redirect(`/clients/${data.id}`);
 }
 
+export async function updateClientAction(formData: FormData) {
+  const { supabase } = await requireUser();
+
+  const clientId = requiredText(formData.get("client_id"), "Client");
+  const payload = {
+    company_name: requiredText(formData.get("company_name"), "Company name"),
+    billing_name: optionalText(formData.get("billing_name")),
+    email: optionalText(formData.get("email")),
+    phone: optionalText(formData.get("phone")),
+    address_line_1: optionalText(formData.get("address_line_1")),
+    address_line_2: optionalText(formData.get("address_line_2")),
+    city: optionalText(formData.get("city")),
+    state: optionalText(formData.get("state")),
+    postal_code: optionalText(formData.get("postal_code")),
+    country: optionalText(formData.get("country")),
+    notes: optionalText(formData.get("notes")),
+    active: formData.get("active") !== null,
+  };
+
+  const { error } = await supabase
+    .from("clients")
+    .update(payload)
+    .eq("id", clientId)
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  revalidatePath(`/clients/${clientId}`);
+  revalidatePath("/clients");
+  redirect(`/clients/${clientId}`);
+}
+
 export async function createContactAction(formData: FormData) {
   const { supabase } = await requireUser();
 

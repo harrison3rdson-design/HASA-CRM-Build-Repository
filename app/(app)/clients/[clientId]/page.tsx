@@ -1,5 +1,6 @@
 import { Panel } from "@/components/cards";
 import { DetailGrid, DetailItem } from "@/components/dialogs/details";
+import { ClientEditForm } from "@/components/forms/client-edit-form";
 import { ContactForm } from "@/components/forms/contact-form";
 import { getClientDetail } from "@/lib/data/detail-data";
 import { money } from "@/lib/ui/format";
@@ -25,6 +26,10 @@ export default async function ClientDetailPage({
           <DetailItem label="Phone" value={d.client.phone} />
           <DetailItem label="Status" value={d.client.active ? "Active" : "Inactive"} />
         </DetailGrid>
+      </Panel>
+
+      <Panel title="Edit Client Information">
+        <ClientEditForm client={d.client} />
       </Panel>
 
       <Panel title="Contacts">

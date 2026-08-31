@@ -1,4 +1,5 @@
 import { updateCompanySettingsAction } from "@/app/actions/settings";
+import { PAYMENT_TERMS } from "@/lib/payment-terms";
 
 export function SettingsForm({ settings }: { settings: any }) {
   return (
@@ -8,7 +9,11 @@ export function SettingsForm({ settings }: { settings: any }) {
       <label>Phone<input name="phone" defaultValue={settings.phone ?? ""} /></label>
       <label>Email<input name="email" type="email" defaultValue={settings.email ?? ""} /></label>
       <label>Website<input name="website" defaultValue={settings.website ?? ""} /></label>
-      <label>Default Terms<input name="default_payment_terms" defaultValue={settings.default_payment_terms ?? "NET 15"} required /></label>
+      <label>Default Payment Terms
+        <select name="default_payment_terms" defaultValue={settings.default_payment_terms ?? "NET 15"} required>
+          {PAYMENT_TERMS.map((terms) => <option key={terms} value={terms}>{terms}</option>)}
+        </select>
+      </label>
       <label>Currency<input name="default_currency" defaultValue={settings.default_currency ?? "USD"} required /></label>
       <label>Horizontal Logo Path<input name="logo_horizontal_path" defaultValue={settings.logo_horizontal_path ?? ""} /></label>
       <label>Square Logo Path<input name="logo_square_path" defaultValue={settings.logo_square_path ?? ""} /></label>

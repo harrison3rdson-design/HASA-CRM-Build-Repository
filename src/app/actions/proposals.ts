@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { requiredText, optionalText, numberValue } from "@/lib/validation/common";
+import { parsePaymentTerms } from "@/lib/payment-terms";
 
 export async function createProposalAction(formData: FormData) {
   const { supabase, authUser } = await requireUser();
@@ -11,6 +13,17 @@ export async function createProposalAction(formData: FormData) {
   const proposalNumber = requiredText(formData.get("proposal_number"), "Proposal number");
   const clientId = requiredText(formData.get("client_id"), "Client");
   const projectName = requiredText(formData.get("project_name"), "Project name");
+  let paymentTerms = optionalText(formData.get("payment_terms"));
+
+  if (!paymentTerms) {
+    const { data: settings, error: settingsError } = await supabase
+      .from("company_settings")
+      .select("default_payment_terms")
+      .limit(1)
+      .single();
+    if (settingsError) throw settingsError;
+    paymentTerms = settings.default_payment_terms;
+  }
 
   const { data: proposal, error: proposalError } = await supabase
     .from("proposals")
@@ -41,7 +54,7 @@ export async function createProposalAction(formData: FormData) {
       revision_number: 1,
       professional_fee: numberValue(formData.get("professional_fee"), "Professional fee", { min: 0 }),
       estimated_expenses: numberValue(formData.get("estimated_expenses"), "Estimated expenses", { min: 0 }),
-      payment_terms: optionalText(formData.get("payment_terms")) ?? "NET 15",
+      payment_terms: parsePaymentTerms(paymentTerms),
       validity_days: numberValue(formData.get("validity_days"), "Validity days", { min: 1 }),
       billing_method: optionalText(formData.get("billing_method")),
       created_by: userRecord?.id ?? null,
@@ -52,7 +65,32 @@ export async function createProposalAction(formData: FormData) {
   if (revisionError) throw revisionError;
 
   revalidatePath("/proposals");
-  return { proposalId: proposal.id as string, revisionId: revision.id as string };
+  redirect(`/proposals/${proposal.id}`);
+}
+
+export async function updateProposalRevisionPaymentTermsAction(formData: FormData) {
+  await requireUser();
+  const admin = createAdminClient();
+  const revisionId = requiredText(formData.get("revision_id"), "Proposal revision");
+  const paymentTerms = parsePaymentTerms(formData.get("payment_terms"));
+
+  const { data: revision, error: readError } = await admin
+    .from("proposal_revisions")
+    .select("proposal_id,locked")
+    .eq("id", revisionId)
+    .single();
+
+  if (readError) throw readError;
+  if (revision.locked) throw new Error("Accepted proposal revision terms are locked and cannot be changed.");
+
+  const { error: updateError } = await admin
+    .from("proposal_revisions")
+    .update({ payment_terms: paymentTerms })
+    .eq("id", revisionId)
+    .eq("locked", false);
+
+  if (updateError) throw updateError;
+  revalidatePath(`/proposals/${revision.proposal_id}`);
 }
 
 export async function createProposalRevisionAction(proposalId: string) {

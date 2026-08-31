@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { requiredText, optionalText, numberValue, boolValue } from "@/lib/validation/common";
+import { parsePaymentTerms } from "@/lib/payment-terms";
 
 export async function createInvoiceAction(formData: FormData) {
   await requireUser();
@@ -13,11 +14,32 @@ export async function createInvoiceAction(formData: FormData) {
 
   const { data: project, error: projectError } = await admin
     .from("projects")
-    .select("client_id")
+    .select("client_id,source_revision_id")
     .eq("id", projectId)
     .single();
 
   if (projectError) throw projectError;
+
+  let inheritedPaymentTerms: string | null = null;
+  if (project.source_revision_id) {
+    const { data: revision, error: revisionError } = await admin
+      .from("proposal_revisions")
+      .select("payment_terms")
+      .eq("id", project.source_revision_id)
+      .single();
+    if (revisionError) throw revisionError;
+    inheritedPaymentTerms = revision.payment_terms;
+  }
+
+  if (!inheritedPaymentTerms) {
+    const { data: settings, error: settingsError } = await admin
+      .from("company_settings")
+      .select("default_payment_terms")
+      .limit(1)
+      .single();
+    if (settingsError) throw settingsError;
+    inheritedPaymentTerms = settings.default_payment_terms;
+  }
 
   const { data: invoiceNumber, error: numberError } = await admin.rpc("next_invoice_number", {
     p_project_id: projectId,
@@ -33,7 +55,7 @@ export async function createInvoiceAction(formData: FormData) {
       invoice_type: requiredText(formData.get("invoice_type"), "Invoice type"),
       invoice_date: requiredText(formData.get("invoice_date"), "Invoice date"),
       due_date: optionalText(formData.get("due_date")),
-      payment_terms: optionalText(formData.get("payment_terms")) ?? "NET 15",
+      payment_terms: parsePaymentTerms(optionalText(formData.get("payment_terms")) ?? inheritedPaymentTerms),
       customer_notes: optionalText(formData.get("customer_notes")),
       internal_notes: optionalText(formData.get("internal_notes")),
       include_expense_detail: boolValue(formData.get("include_expense_detail")),

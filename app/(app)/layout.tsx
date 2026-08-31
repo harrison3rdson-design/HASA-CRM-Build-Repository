@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import "@/styles/app.css";
+import "@/styles/phase6-forms.css";
+import "@/styles/phase7-details.css";
 
 const nav = [
   ["Dashboard","/dashboard"],["Clients","/clients"],["Proposals","/proposals"],

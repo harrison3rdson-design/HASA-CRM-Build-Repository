@@ -1,6 +1,7 @@
 import { Panel } from "@/components/cards";
 import { ProposalSummary } from "@/components/proposals/proposal-summary";
 import { CreateRevisionButton } from "@/components/proposals/revision-button";
+import { RevisionPaymentTermsForm } from "@/components/forms/revision-payment-terms-form";
 import { getProposalDetail } from "@/lib/data/detail-data";
 import { money } from "@/lib/ui/format";
 
@@ -22,9 +23,22 @@ export default async function ProposalDetailPage({
 
       {latest ? <ProposalSummary revision={latest} /> : null}
 
+      {latest ? (
+        <Panel title={`Revision ${latest.revision_number} Payment Terms`}>
+          <RevisionPaymentTermsForm
+            revisionId={latest.id}
+            paymentTerms={latest.payment_terms}
+            locked={latest.locked}
+          />
+          <p className="footnote">
+            Accepted revisions are locked permanently. New revisions copy the prior revision’s terms and can be changed before acceptance.
+          </p>
+        </Panel>
+      ) : null}
+
       <Panel title="Revision History">
-        <div className="table-wrap"><table><thead><tr><th>Revision</th><th>Date</th><th>Fee</th><th>Expenses</th><th>Total</th><th>Locked</th></tr></thead>
-        <tbody>{d.revisions.map((r:any)=><tr key={r.id}><td>R{r.revision_number}</td><td>{r.revision_date}</td><td>{money(r.professional_fee)}</td><td>{money(r.estimated_expenses)}</td><td>{money(r.estimated_total)}</td><td>{r.locked?"Yes":"No"}</td></tr>)}</tbody></table></div>
+        <div className="table-wrap"><table><thead><tr><th>Revision</th><th>Date</th><th>Fee</th><th>Expenses</th><th>Total</th><th>Terms</th><th>Locked</th></tr></thead>
+        <tbody>{d.revisions.map((r:any)=><tr key={r.id}><td>R{r.revision_number}</td><td>{r.revision_date}</td><td>{money(r.professional_fee)}</td><td>{money(r.estimated_expenses)}</td><td>{money(r.estimated_total)}</td><td>{r.payment_terms}</td><td>{r.locked?"Yes":"No"}</td></tr>)}</tbody></table></div>
       </Panel>
 
       {latest ? <>

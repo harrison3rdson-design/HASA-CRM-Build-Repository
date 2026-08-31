@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/server";
 import { requiredText, optionalText } from "@/lib/validation/common";
+import { parsePaymentTerms } from "@/lib/payment-terms";
 
 export async function updateCompanySettingsAction(formData: FormData) {
   const { supabase } = await requireUser();
@@ -23,7 +24,7 @@ export async function updateCompanySettingsAction(formData: FormData) {
       phone: optionalText(formData.get("phone")),
       email: optionalText(formData.get("email")),
       website: optionalText(formData.get("website")),
-      default_payment_terms: requiredText(formData.get("default_payment_terms"), "Default payment terms"),
+      default_payment_terms: parsePaymentTerms(formData.get("default_payment_terms"), "Default payment terms"),
       default_currency: requiredText(formData.get("default_currency"), "Currency"),
       logo_horizontal_path: optionalText(formData.get("logo_horizontal_path")),
       logo_square_path: optionalText(formData.get("logo_square_path")),

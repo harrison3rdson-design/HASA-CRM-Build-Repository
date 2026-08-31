@@ -20,3 +20,4 @@ describe("HASA Release 1 staging smoke", () => {
   test.todo("issues branded invoice with receipt appendix");
   test.todo("records partial and final payment");
 });
+import { describe, test } from "vitest";

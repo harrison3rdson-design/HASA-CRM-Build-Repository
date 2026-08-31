@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase-admin";
+import { parsePaymentTerms } from "@/lib/payment-terms";
 
 export async function getDashboardData(){
   const s=createAdminClient();
@@ -41,4 +42,61 @@ export async function getCompanySettings(){
   const {data,error}=await s.from("company_settings").select("*").limit(1).single();
   if(error) throw error;
   return data;
+}
+
+export async function getProposalFormData() {
+  const s = createAdminClient();
+  const [{ data: clients, error: clientsError }, { data: settings, error: settingsError }] = await Promise.all([
+    s.from("clients").select("id,client_number,company_name").eq("active", true).order("company_name"),
+    s.from("company_settings").select("default_payment_terms").limit(1).single(),
+  ]);
+
+  if (clientsError) throw clientsError;
+  if (settingsError) throw settingsError;
+
+  return {
+    clients: clients ?? [],
+    defaultPaymentTerms: parsePaymentTerms(settings.default_payment_terms, "Default payment terms"),
+  };
+}
+
+export async function getInvoiceFormData() {
+  const s = createAdminClient();
+  const [{ data: projects, error: projectsError }, { data: settings, error: settingsError }] = await Promise.all([
+    s.from("projects")
+      .select("id,project_number,project_name,source_revision_id")
+      .eq("status", "active")
+      .order("project_number"),
+    s.from("company_settings").select("default_payment_terms").limit(1).single(),
+  ]);
+
+  if (projectsError) throw projectsError;
+  if (settingsError) throw settingsError;
+
+  const defaultPaymentTerms = parsePaymentTerms(settings.default_payment_terms, "Default payment terms");
+  const revisionIds = (projects ?? [])
+    .map((project) => project.source_revision_id)
+    .filter((id): id is string => Boolean(id));
+
+  let termsByRevision = new Map<string, string>();
+  if (revisionIds.length) {
+    const { data: revisions, error: revisionsError } = await s
+      .from("proposal_revisions")
+      .select("id,payment_terms")
+      .in("id", revisionIds);
+    if (revisionsError) throw revisionsError;
+    termsByRevision = new Map((revisions ?? []).map((revision) => [revision.id, revision.payment_terms]));
+  }
+
+  return {
+    projects: (projects ?? []).map((project) => ({
+      id: project.id,
+      project_number: project.project_number,
+      project_name: project.project_name,
+      payment_terms: parsePaymentTerms(
+        (project.source_revision_id && termsByRevision.get(project.source_revision_id)) || defaultPaymentTerms
+      ),
+    })),
+    defaultPaymentTerms,
+  };
 }

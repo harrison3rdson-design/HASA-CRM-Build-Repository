@@ -29,7 +29,7 @@ export async function createClientAction(formData: FormData) {
 
   if (error) throw error;
   revalidatePath("/clients");
-  return data.id as string;
+  void data;
 }
 
 export async function createContactAction(formData: FormData) {

@@ -31,5 +31,6 @@ export async function createAdditionalServiceAction(formData: FormData) {
 
   if (error) throw error;
   revalidatePath("/projects");
-  return data.id as string;
+  void data;
+  revalidatePath(`/projects/${projectId}`);
 }

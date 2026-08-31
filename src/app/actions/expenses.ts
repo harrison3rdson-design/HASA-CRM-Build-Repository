@@ -47,7 +47,7 @@ export async function createExpenseAction(formData: FormData) {
 
   if (error) throw error;
   revalidatePath("/expenses");
-  return data;
+  void data;
 }
 
 export async function uploadReceiptForExpenseAction(formData: FormData) {

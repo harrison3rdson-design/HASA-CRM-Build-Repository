@@ -45,7 +45,7 @@ export async function createInvoiceAction(formData: FormData) {
 
   if (error) throw error;
   revalidatePath("/billing");
-  return data;
+  void data;
 }
 
 export async function addInvoiceItemAction(formData: FormData) {

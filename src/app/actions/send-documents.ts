@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { createProposalShareLink, createAdditionalServiceShareLink } from "@/lib/public/share-links";
 import { deliverPublicLink } from "@/lib/delivery/send-document";
+import { normalizeRelatedContact, selectDefaultProposalContact } from "@/lib/proposal-contacts";
 
 function appUrl() {
   const url = process.env.NEXT_PUBLIC_APP_URL;
@@ -21,7 +22,7 @@ export async function sendProposalAction(input: {
   const admin = createAdminClient();
 
   const { data: proposal, error } = await admin.from("proposals").select(`
-    proposal_number,project_name,current_revision,status,primary_contact:contacts(first_name,last_name,email,mobile_phone)
+    proposal_number,project_name,client_id,current_revision,status,primary_contact:contacts(id,first_name,last_name,email,mobile_phone,is_primary)
   `).eq("id", input.proposalId).single();
   if (error) throw error;
 
@@ -37,17 +38,41 @@ export async function sendProposalAction(input: {
   if (revision.locked) throw new Error("This proposal revision has already been sent and locked.");
   if (proposal.status !== "draft") throw new Error("Only a draft proposal can be sent.");
 
+  let contact = normalizeRelatedContact(proposal.primary_contact);
+  if (!contact) {
+    const { data: contacts, error: contactsError } = await admin
+      .from("contacts")
+      .select("id,first_name,last_name,email,mobile_phone,is_primary")
+      .eq("client_id", proposal.client_id)
+      .order("is_primary", { ascending: false })
+      .order("created_at", { ascending: true });
+    if (contactsError) throw contactsError;
+
+    contact = selectDefaultProposalContact(contacts ?? []);
+    if (contact) {
+      const { error: assignError } = await admin
+        .from("proposals")
+        .update({ primary_contact_id: contact.id })
+        .eq("id", input.proposalId)
+        .is("primary_contact_id", null);
+      if (assignError) throw assignError;
+    }
+  }
+
+  if (!contact?.email && !contact?.mobile_phone) {
+    throw new Error("Assign a Primary Contact with an email address or mobile number before sending.");
+  }
+
   const { token } = await createProposalShareLink(input.revisionId);
   const url = `${appUrl()}/public/proposals/${token}`;
-  const c: any = proposal.primary_contact;
 
   const results = await deliverPublicLink({
     documentType: "proposal",
     relatedRecordId: input.proposalId,
     url,
-    recipientName: [c?.first_name,c?.last_name].filter(Boolean).join(" "),
-    email: c?.email,
-    mobile: c?.mobile_phone,
+    recipientName: [contact.first_name,contact.last_name].filter(Boolean).join(" "),
+    email: contact.email,
+    mobile: contact.mobile_phone,
     method: input.method,
     subject: `HASA Concepts Proposal ${proposal.proposal_number}`,
     message: `Please review proposal ${proposal.proposal_number} for ${proposal.project_name}.`,

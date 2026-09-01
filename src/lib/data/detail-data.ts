@@ -30,11 +30,23 @@ export async function getProposalDetail(proposalId: string) {
 
   if (error) throw error;
 
-  const { data: revisions } = await s
-    .from("proposal_revisions")
-    .select("*")
-    .eq("proposal_id", proposalId)
-    .order("revision_number", { ascending: false });
+  const [
+    { data: revisions, error: revisionsError },
+    { data: contacts, error: contactsError },
+  ] = await Promise.all([
+    s.from("proposal_revisions")
+      .select("*")
+      .eq("proposal_id", proposalId)
+      .order("revision_number", { ascending: false }),
+    s.from("contacts")
+      .select("id,first_name,last_name,email,mobile_phone,is_primary")
+      .eq("client_id", proposal.client_id)
+      .order("is_primary", { ascending: false })
+      .order("created_at", { ascending: true }),
+  ]);
+
+  if (revisionsError) throw revisionsError;
+  if (contactsError) throw contactsError;
 
   const revisionIds = (revisions ?? []).map(r => r.id);
 
@@ -47,6 +59,7 @@ export async function getProposalDetail(proposalId: string) {
 
   return {
     proposal,
+    contacts: contacts ?? [],
     revisions: revisions ?? [],
     sections: sections ?? [],
     fees: fees ?? [],

@@ -13,6 +13,7 @@ import {
   roundMoney,
 } from "@/lib/proposal-items";
 import { parseProposalSectionType } from "@/lib/proposal-sections";
+import { selectDefaultProposalContact } from "@/lib/proposal-contacts";
 
 function itemCount(value: FormDataEntryValue | null, label: string): number {
   const count = numberValue(value, label, { min: 0, max: 50 });
@@ -129,9 +130,28 @@ export async function createProposalAction(formData: FormData) {
 
   const clientId = requiredText(formData.get("client_id"), "Client");
   const projectName = requiredText(formData.get("project_name"), "Project name");
+  const requestedContactId = optionalText(formData.get("primary_contact_id"));
   const scopeSections = parseProposalSections(formData);
   const { feeItems, expenseItems, professionalFee, estimatedExpenses } = parseProposalItems(formData);
   let paymentTerms = optionalText(formData.get("payment_terms"));
+
+  const { data: clientContacts, error: contactsError } = await supabase
+    .from("contacts")
+    .select("id,is_primary")
+    .eq("client_id", clientId)
+    .order("is_primary", { ascending: false })
+    .order("created_at", { ascending: true });
+  if (contactsError) throw contactsError;
+
+  const requestedContact = requestedContactId
+    ? clientContacts?.find((contact) => contact.id === requestedContactId)
+    : null;
+  if (requestedContactId && !requestedContact) {
+    throw new Error("The selected Primary Contact does not belong to this Client.");
+  }
+  const primaryContactId = requestedContact?.id
+    ?? selectDefaultProposalContact(clientContacts ?? [])?.id
+    ?? null;
 
   if (!paymentTerms) {
     const { data: settings, error: settingsError } = await supabase
@@ -147,7 +167,7 @@ export async function createProposalAction(formData: FormData) {
     .from("proposals")
     .insert({
       client_id: clientId,
-      primary_contact_id: optionalText(formData.get("primary_contact_id")),
+      primary_contact_id: primaryContactId,
       project_name: projectName,
       project_location: optionalText(formData.get("project_location")),
       status: "draft",
@@ -223,6 +243,55 @@ export async function createProposalAction(formData: FormData) {
 
   revalidatePath("/proposals");
   redirect(`/proposals/${proposal.id}`);
+}
+
+export async function updateProposalPrimaryContactAction(formData: FormData) {
+  await requireUser();
+  const admin = createAdminClient();
+  const proposalId = requiredText(formData.get("proposal_id"), "Proposal");
+  const contactId = requiredText(formData.get("primary_contact_id"), "Primary Contact");
+
+  const { data: proposal, error: proposalError } = await admin
+    .from("proposals")
+    .select("id,client_id,current_revision,status")
+    .eq("id", proposalId)
+    .single();
+  if (proposalError) throw proposalError;
+  if (proposal.status !== "draft") throw new Error("Only a draft proposal can change its Primary Contact.");
+
+  const [
+    { data: contact, error: contactError },
+    { data: revision, error: revisionError },
+  ] = await Promise.all([
+    admin.from("contacts")
+      .select("id")
+      .eq("id", contactId)
+      .eq("client_id", proposal.client_id)
+      .maybeSingle(),
+    admin.from("proposal_revisions")
+      .select("locked")
+      .eq("proposal_id", proposalId)
+      .eq("revision_number", proposal.current_revision)
+      .single(),
+  ]);
+
+  if (contactError) throw contactError;
+  if (!contact) throw new Error("The selected Primary Contact does not belong to this Client.");
+  if (revisionError) throw revisionError;
+  if (revision.locked) throw new Error("A sent proposal is locked and its Primary Contact cannot be changed.");
+
+  const { data: updatedProposal, error: updateError } = await admin
+    .from("proposals")
+    .update({ primary_contact_id: contact.id })
+    .eq("id", proposalId)
+    .eq("status", "draft")
+    .select("id")
+    .maybeSingle();
+  if (updateError) throw updateError;
+  if (!updatedProposal) throw new Error("The proposal changed before the Primary Contact could be saved.");
+
+  revalidatePath("/proposals");
+  revalidatePath(`/proposals/${proposalId}`);
 }
 
 export async function updateProposalRevisionPaymentTermsAction(formData: FormData) {

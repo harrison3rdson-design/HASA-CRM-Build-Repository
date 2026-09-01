@@ -47,7 +47,10 @@ export async function getCompanySettings(){
 export async function getProposalFormData() {
   const s = createAdminClient();
   const [{ data: clients, error: clientsError }, { data: settings, error: settingsError }] = await Promise.all([
-    s.from("clients").select("id,client_number,company_name").eq("active", true).order("company_name"),
+    s.from("clients")
+      .select("id,client_number,company_name,contacts(id,first_name,last_name,email,mobile_phone,is_primary)")
+      .eq("active", true)
+      .order("company_name"),
     s.from("company_settings").select("default_payment_terms").limit(1).single(),
   ]);
 
@@ -55,7 +58,10 @@ export async function getProposalFormData() {
   if (settingsError) throw settingsError;
 
   return {
-    clients: clients ?? [],
+    clients: (clients ?? []).map((client) => ({
+      ...client,
+      contacts: [...(client.contacts ?? [])].sort((left, right) => Number(right.is_primary) - Number(left.is_primary)),
+    })),
     defaultPaymentTerms: parsePaymentTerms(settings.default_payment_terms, "Default payment terms"),
   };
 }

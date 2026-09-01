@@ -6,8 +6,14 @@ import { DeleteRevisionButton } from "@/components/proposals/delete-revision-but
 import { SendProposalButton } from "@/components/proposals/send-proposal-button";
 import { RevisionPaymentTermsForm } from "@/components/forms/revision-payment-terms-form";
 import { ProposalRevisionForm } from "@/components/forms/proposal-revision-form";
+import { ProposalPrimaryContactForm } from "@/components/forms/proposal-primary-contact-form";
 import { getProposalDetail } from "@/lib/data/detail-data";
 import { parsePaymentTerms } from "@/lib/payment-terms";
+import {
+  normalizeRelatedContact,
+  selectDefaultProposalContact,
+  type ProposalContactOption,
+} from "@/lib/proposal-contacts";
 import type { ExpenseBillingRule } from "@/lib/proposal-items";
 import { parseProposalSectionType } from "@/lib/proposal-sections";
 import { money } from "@/lib/ui/format";
@@ -52,6 +58,9 @@ export default async function ProposalDetailPage({
   const { edit } = await searchParams;
   const d = await getProposalDetail(proposalId);
   const latest = d.revisions[0];
+  const contacts = d.contacts as ProposalContactOption[];
+  const primaryContact = normalizeRelatedContact(d.proposal.primary_contact)
+    ?? selectDefaultProposalContact(contacts);
   const showEditor = Boolean(latest && !latest.locked && edit !== "0");
   const scopeSections = latest ? (d.sections as SectionRecord[])
     .filter((section) => section.proposal_revision_id === latest.id)
@@ -97,8 +106,8 @@ export default async function ProposalDetailPage({
             <SendProposalButton
               proposalId={proposalId}
               revisionId={latest.id}
-              hasEmail={Boolean(d.proposal.primary_contact?.email)}
-              hasMobile={Boolean(d.proposal.primary_contact?.mobile_phone)}
+              hasEmail={Boolean(primaryContact?.email)}
+              hasMobile={Boolean(primaryContact?.mobile_phone)}
             />
           ) : null}
           {latest && !latest.locked && latest.revision_number > 1 ? (
@@ -110,6 +119,17 @@ export default async function ProposalDetailPage({
           <CreateRevisionButton proposalId={proposalId} />
         </div>
       </div>
+
+      {latest ? (
+        <Panel title="Proposal Contact">
+          <ProposalPrimaryContactForm
+            proposalId={proposalId}
+            contacts={contacts}
+            primaryContactId={primaryContact?.id ?? ""}
+            locked={latest.locked}
+          />
+        </Panel>
+      ) : null}
 
       {showEditor && latest ? (
         <Panel title={`Edit Revision ${latest.revision_number}`}>

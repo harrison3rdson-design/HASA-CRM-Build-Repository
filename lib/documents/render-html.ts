@@ -1,4 +1,5 @@
 import type { InvoiceDocumentModel, ProposalDocumentModel } from "@/types/documents";
+import { proposalRevisionLabel } from "@/lib/proposal-revisions";
 
 function esc(value: unknown): string {
   return String(value ?? "")
@@ -72,7 +73,7 @@ export function renderProposalHtml(model: ProposalDocumentModel): string {
     <div class="grid">
       <div>
         <strong>Proposal #${esc(model.proposalNumber)}</strong><br>
-        Revision ${model.revisionNumber}<br>
+        ${esc(proposalRevisionLabel(model.revisionNumber))}<br>
         <span class="muted">${esc(model.proposalDate)}</span>
       </div>
       <div>

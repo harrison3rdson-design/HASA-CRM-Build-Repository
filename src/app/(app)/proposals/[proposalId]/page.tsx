@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Panel } from "@/components/cards";
 import { ProposalSummary } from "@/components/proposals/proposal-summary";
 import { CreateRevisionButton } from "@/components/proposals/revision-button";
+import { DeleteProposalButton } from "@/components/proposals/delete-proposal-button";
 import { DeleteRevisionButton } from "@/components/proposals/delete-revision-button";
 import { SendProposalButton } from "@/components/proposals/send-proposal-button";
 import { RevisionPaymentTermsForm } from "@/components/forms/revision-payment-terms-form";
@@ -16,6 +17,7 @@ import {
 } from "@/lib/proposal-contacts";
 import type { ExpenseBillingRule } from "@/lib/proposal-items";
 import { parseProposalSectionType } from "@/lib/proposal-sections";
+import { proposalRevisionLabel } from "@/lib/proposal-revisions";
 import { money } from "@/lib/ui/format";
 
 type SectionRecord = {
@@ -61,7 +63,14 @@ export default async function ProposalDetailPage({
   const contacts = d.contacts as ProposalContactOption[];
   const primaryContact = normalizeRelatedContact(d.proposal.primary_contact)
     ?? selectDefaultProposalContact(contacts);
+  const latestLabel = latest ? proposalRevisionLabel(latest.revision_number) : "Proposal";
   const showEditor = Boolean(latest && !latest.locked && edit !== "0");
+  const canOfferProposalDeletion = Boolean(
+    latest
+    && d.proposal.status === "draft"
+    && d.revisions.every((revision: { locked: boolean }) => !revision.locked)
+    && d.acceptances.length === 0
+  );
   const scopeSections = latest ? (d.sections as SectionRecord[])
     .filter((section) => section.proposal_revision_id === latest.id)
     .map((section) => ({
@@ -102,10 +111,10 @@ export default async function ProposalDetailPage({
         <header className="proposal-area-heading">
           <div>
             <span className="proposal-area-eyebrow">Proposal Work Area</span>
-            <h2 id="proposal-work-area-title">Build and manage Revision {latest?.revision_number ?? ""}</h2>
+            <h2 id="proposal-work-area-title">Build and manage {latestLabel}</h2>
             <p>{latest?.locked
-              ? "This revision is locked because it has been sent. Create a revision to make changes."
-              : "Contact, scope, hours, rates, expenses, and terms remain editable here until the revision is sent."}</p>
+              ? "This proposal version is locked because it has been sent. Create a revision to make changes."
+              : "Contact, scope, hours, rates, expenses, and terms remain editable here until this version is sent."}</p>
           </div>
           <div className="button-row proposal-area-actions">
           {latest && !latest.locked && !showEditor ? (
@@ -138,6 +147,13 @@ export default async function ProposalDetailPage({
               revisionNumber={latest.revision_number}
             />
           ) : null}
+          {canOfferProposalDeletion ? (
+            <DeleteProposalButton
+              proposalId={proposalId}
+              proposalNumber={d.proposal.proposal_number}
+              clientId={d.proposal.client_id}
+            />
+          ) : null}
           <CreateRevisionButton proposalId={proposalId} />
           </div>
         </header>
@@ -154,8 +170,8 @@ export default async function ProposalDetailPage({
         ) : null}
 
         {showEditor && latest ? (
-          <Panel title={`Edit Revision ${latest.revision_number}`}>
-            <p className="footnote">This draft remains editable until it is sent. Sending permanently locks this revision.</p>
+          <Panel title={`Edit ${latestLabel}`}>
+            <p className="footnote">This draft remains editable until it is sent. Sending permanently locks this proposal version.</p>
             <ProposalRevisionForm
               proposalId={proposalId}
               revision={{
@@ -173,15 +189,15 @@ export default async function ProposalDetailPage({
         ) : null}
 
         {latest ? (
-          <Panel title={`Revision ${latest.revision_number} Payment Terms`}>
+          <Panel title={`${latestLabel} Payment Terms`}>
             <RevisionPaymentTermsForm
               revisionId={latest.id}
               paymentTerms={latest.payment_terms}
               locked={latest.locked}
             />
             <p className="footnote">
-              Sent and accepted revisions are locked permanently. A new revision copies the prior terms and remains editable until it is sent.
-              Unlocked revisions can be deleted in reverse order, beginning with the latest revision. Revision 1 is retained as the proposal’s base revision.
+              Sent and accepted proposal versions are locked permanently. A new revision copies the prior terms and remains editable until it is sent.
+              Unlocked revisions can be deleted in reverse order, beginning with the latest revision. The Original Proposal remains until the entire unissued draft proposal is deleted.
             </p>
           </Panel>
         ) : null}
@@ -199,9 +215,9 @@ export default async function ProposalDetailPage({
 
         {latest ? <ProposalSummary revision={latest} /> : null}
 
-        <Panel title="Revision History">
-          <div className="table-wrap"><table><thead><tr><th>Revision</th><th>Date</th><th>Fee</th><th>Expenses</th><th>Total</th><th>Terms</th><th>Locked</th></tr></thead>
-          <tbody>{d.revisions.map((r:any)=><tr key={r.id}><td>R{r.revision_number}</td><td>{r.revision_date}</td><td>{money(r.professional_fee)}</td><td>{money(r.estimated_expenses)}</td><td>{money(r.estimated_total)}</td><td>{r.payment_terms}</td><td>{r.locked?"Yes":"No"}</td></tr>)}</tbody></table></div>
+        <Panel title="Proposal Version History">
+          <div className="table-wrap"><table><thead><tr><th>Version</th><th>Date</th><th>Fee</th><th>Expenses</th><th>Total</th><th>Terms</th><th>Locked</th></tr></thead>
+          <tbody>{d.revisions.map((r:any)=><tr key={r.id}><td>{proposalRevisionLabel(r.revision_number)}</td><td>{r.revision_date}</td><td>{money(r.professional_fee)}</td><td>{money(r.estimated_expenses)}</td><td>{money(r.estimated_total)}</td><td>{r.payment_terms}</td><td>{r.locked?"Yes":"No"}</td></tr>)}</tbody></table></div>
         </Panel>
 
         {latest ? <>

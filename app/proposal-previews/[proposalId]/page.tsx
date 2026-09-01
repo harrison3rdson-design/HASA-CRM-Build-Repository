@@ -5,6 +5,7 @@ import { ProposalDocument } from "@/components/public/proposal-document";
 import { getCurrentUser } from "@/lib/auth/server";
 import { getCompanySettings } from "@/lib/data/app-data";
 import { getProposalDetail } from "@/lib/data/detail-data";
+import { proposalRevisionLabel } from "@/lib/proposal-revisions";
 import "@/styles/public.css";
 
 type RevisionItem = { proposal_revision_id: string };
@@ -43,7 +44,7 @@ export default async function ProposalPreviewPage({
       <aside className="public-preview-notice" aria-label="Customer preview status">
         <div>
           <strong>Customer View Preview</strong>
-          <span>This is the current Revision {revision.revision_number} exactly as the customer will see it.</span>
+          <span>This is the current {proposalRevisionLabel(revision.revision_number)} exactly as the customer will see it.</span>
         </div>
         <Link className="public-preview-back" href={`/proposals/${proposalId}`}>
           Back to Proposal Work Area

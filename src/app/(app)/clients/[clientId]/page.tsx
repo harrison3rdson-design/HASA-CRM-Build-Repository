@@ -5,6 +5,7 @@ import { ClientEditForm } from "@/components/forms/client-edit-form";
 import { ContactForm } from "@/components/forms/contact-form";
 import { getClientDetail } from "@/lib/data/detail-data";
 import { money } from "@/lib/ui/format";
+import { proposalRevisionLabel } from "@/lib/proposal-revisions";
 
 export default async function ClientDetailPage({
   params,
@@ -48,8 +49,8 @@ export default async function ClientDetailPage({
       </Panel>
 
       <Panel title="Proposals">
-        <div className="table-wrap"><table><thead><tr><th>Proposal</th><th>Project</th><th>Status</th><th>Revision</th></tr></thead>
-        <tbody>{d.proposals.map((p:any)=><tr key={p.id}><td><a href={`/proposals/${p.id}`}>{p.proposal_number}</a></td><td>{p.project_name}</td><td>{p.status}</td><td>R{p.current_revision}</td></tr>)}</tbody></table></div>
+        <div className="table-wrap"><table><thead><tr><th>Proposal</th><th>Project</th><th>Status</th><th>Version</th></tr></thead>
+        <tbody>{d.proposals.map((p:any)=><tr key={p.id}><td><a href={`/proposals/${p.id}`}>{p.proposal_number}</a></td><td>{p.project_name}</td><td>{p.status}</td><td>{proposalRevisionLabel(p.current_revision)}</td></tr>)}</tbody></table></div>
       </Panel>
 
       <Panel title="Projects">

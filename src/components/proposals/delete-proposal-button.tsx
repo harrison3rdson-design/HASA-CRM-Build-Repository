@@ -2,18 +2,18 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { deleteLatestProposalRevisionAction } from "@/app/actions/proposals";
-import { proposalRevisionLabel } from "@/lib/proposal-revisions";
+import { deleteUnissuedDraftProposalAction } from "@/app/actions/proposals";
 
-export function DeleteRevisionButton({
+export function DeleteProposalButton({
   proposalId,
-  revisionNumber,
+  proposalNumber,
+  clientId,
 }: {
   proposalId: string;
-  revisionNumber: number;
+  proposalNumber: string;
+  clientId: string;
 }) {
   const router = useRouter();
-  const revisionLabel = proposalRevisionLabel(revisionNumber);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
 
@@ -25,23 +25,23 @@ export function DeleteRevisionButton({
         disabled={pending}
         onClick={() => {
           const confirmed = window.confirm(
-            `Delete unlocked ${revisionLabel}? Its scope, labor, and expenses will be removed. This cannot be undone.`
+            `Delete draft Proposal ${proposalNumber}? This is allowed only if it was never issued or viewed by a customer. All draft content will be permanently removed, and the latest proposal number will be released for reuse. This cannot be undone.`
           );
           if (!confirmed) return;
 
           startTransition(async () => {
             try {
               setError("");
-              await deleteLatestProposalRevisionAction(proposalId);
-              router.replace(`/proposals/${proposalId}`);
+              await deleteUnissuedDraftProposalAction(proposalId);
+              router.replace(`/clients/${clientId}`);
               router.refresh();
             } catch (caught) {
-              setError(caught instanceof Error ? caught.message : "Unable to delete the revision.");
+              setError(caught instanceof Error ? caught.message : "Unable to delete the proposal.");
             }
           });
         }}
       >
-        {pending ? "Deleting…" : `Delete ${revisionLabel}`}
+        {pending ? "Deleting…" : "Delete Draft Proposal"}
       </button>
       {error ? <p className="form-error" role="alert">{error}</p> : null}
     </div>

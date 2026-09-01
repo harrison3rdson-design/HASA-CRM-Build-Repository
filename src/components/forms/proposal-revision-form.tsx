@@ -12,6 +12,7 @@ import {
   type ScopeSectionValue,
 } from "@/components/forms/proposal-scope-fields";
 import { PAYMENT_TERMS, type PaymentTerms } from "@/lib/payment-terms";
+import { proposalRevisionLabel } from "@/lib/proposal-revisions";
 
 export function ProposalRevisionForm({
   proposalId,
@@ -32,12 +33,14 @@ export function ProposalRevisionForm({
   laborLines: LaborLineValue[];
   expenseLines: ExpenseLineValue[];
 }) {
+  const revisionLabel = proposalRevisionLabel(revision.revision_number);
+
   return (
     <form action={updateProposalRevisionAction} className="form-grid">
       <input type="hidden" name="revision_id" value={revision.id} />
       <label>
-        Revision
-        <input value={`R${revision.revision_number}`} readOnly />
+        Proposal Version
+        <input value={revisionLabel} readOnly />
       </label>
       <label>
         Payment Terms
@@ -67,7 +70,7 @@ export function ProposalRevisionForm({
       />
 
       <div className="full button-row">
-        <button className="primary-button" type="submit">Save Revision</button>
+        <button className="primary-button" type="submit">Save {revisionLabel}</button>
         <Link className="secondary-button" href={`/proposals/${proposalId}?edit=0`}>Cancel</Link>
       </div>
     </form>

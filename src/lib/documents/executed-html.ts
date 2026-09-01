@@ -1,4 +1,5 @@
 import { money } from "@/lib/ui/format";
+import { proposalRevisionLabel } from "@/lib/proposal-revisions";
 
 export function executedProposalHtml(data: any, signer: any) {
   const sections = (data.sections ?? []).map((s:any) =>
@@ -21,7 +22,7 @@ export function executedProposalHtml(data: any, signer: any) {
     td:last-child{text-align:right}.accept{margin-top:28px;border-top:1px solid #999;padding-top:14px}
   </style></head><body>
     <header><h1>STATEMENT OF WORK BY HASA CONCEPTS, LLC</h1>
-    <div>Proposal #${escapeHtml(data.proposal.proposal_number)} · Revision ${data.revision.revision_number}</div></header>
+    <div>Proposal #${escapeHtml(data.proposal.proposal_number)} · ${escapeHtml(proposalRevisionLabel(data.revision.revision_number))}</div></header>
     <h2>${escapeHtml(data.proposal.project_name)}</h2>
     <p>Client: ${escapeHtml(data.proposal.client?.company_name ?? "")}</p>
     ${sections}

@@ -1,4 +1,5 @@
 import { money } from "@/lib/ui/format";
+import { proposalRevisionLabel } from "@/lib/proposal-revisions";
 
 type ProposalDocumentProps = {
   revision: {
@@ -66,7 +67,7 @@ export function ProposalDocument({
           <span>{company.legal_name}</span>
         </div>
         <div className="public-meta">
-          Proposal #{proposal.proposal_number} · Revision {revision.revision_number}
+          Proposal #{proposal.proposal_number} · {proposalRevisionLabel(revision.revision_number)}
         </div>
       </header>
 

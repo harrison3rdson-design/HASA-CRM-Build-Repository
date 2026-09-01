@@ -6,6 +6,14 @@ export type DeliveryResult = {
   errorMessage?: string;
 };
 
+export function isTwilioConfigured(environment = process.env): boolean {
+  return Boolean(
+    environment.TWILIO_ACCOUNT_SID
+    && environment.TWILIO_AUTH_TOKEN
+    && environment.TWILIO_FROM_NUMBER,
+  );
+}
+
 export class TwilioSmsProvider {
   async sendSms(input: SmsSendInput): Promise<DeliveryResult> {
     const sid = process.env.TWILIO_ACCOUNT_SID;

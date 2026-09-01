@@ -11,18 +11,24 @@ export function SendProposalButton({
   revisionId,
   hasEmail,
   hasMobile,
+  emailConfigured,
+  smsConfigured,
 }: {
   proposalId: string;
   revisionId: string;
   hasEmail: boolean;
   hasMobile: boolean;
+  emailConfigured: boolean;
+  smsConfigured: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
-  const defaultMethod: DeliveryMethod = hasEmail && hasMobile ? "both" : hasEmail ? "email" : "sms";
+  const canEmail = hasEmail && emailConfigured;
+  const canSms = hasMobile && smsConfigured;
+  const defaultMethod: DeliveryMethod = canEmail && canSms ? "both" : canEmail ? "email" : "sms";
   const [method, setMethod] = useState<DeliveryMethod>(defaultMethod);
-  const canSend = hasEmail || hasMobile;
+  const canSend = canEmail || canSms;
 
   return (
     <div>
@@ -33,9 +39,9 @@ export function SendProposalButton({
           disabled={pending || !canSend}
           onChange={(event) => setMethod(event.target.value as DeliveryMethod)}
         >
-          {hasEmail ? <option value="email">Email</option> : null}
-          {hasMobile ? <option value="sms">Text message</option> : null}
-          {hasEmail && hasMobile ? <option value="both">Email and text</option> : null}
+          {canEmail ? <option value="email">Email</option> : null}
+          {canSms ? <option value="sms">Text message</option> : null}
+          {canEmail && canSms ? <option value="both">Email and text</option> : null}
         </select>
         <button
           className="primary-button"
@@ -50,7 +56,11 @@ export function SendProposalButton({
             startTransition(async () => {
               try {
                 setError("");
-                await sendProposalAction({ proposalId, revisionId, method });
+                const result = await sendProposalAction({ proposalId, revisionId, method });
+                if (!result.ok) {
+                  setError(result.error);
+                  return;
+                }
                 router.replace(`/proposals/${proposalId}`);
                 router.refresh();
               } catch (caught) {
@@ -62,7 +72,9 @@ export function SendProposalButton({
           {pending ? "Sending…" : "Send & Lock"}
         </button>
       </div>
-      {!canSend ? <p className="form-error">Add an email address or mobile number to the primary contact before sending.</p> : null}
+      {!hasEmail && !hasMobile ? <p className="form-error">Add an email address or mobile number to the primary contact before sending.</p> : null}
+      {hasMobile && !smsConfigured ? <p className="form-error">Text messaging is not configured for this app. Add the HASA Twilio account settings before sending.</p> : null}
+      {hasEmail && !emailConfigured ? <p className="form-error">Email delivery is not configured for this app.</p> : null}
       {error ? <p className="form-error" role="alert">{error}</p> : null}
     </div>
   );

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { Policies } from "@/lib/auth/action-policy";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { hasAppUrl } from "@/lib/app-url";
+import { isTwilioConfigured } from "@/lib/messaging/twilio";
+import { isTransactionalEmailConfigured } from "@/lib/messaging/email";
 
 export async function GET() {
   try {
@@ -11,11 +14,11 @@ export async function GET() {
       supabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       supabaseServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      appUrl: !!process.env.NEXT_PUBLIC_APP_URL,
+      appUrl: hasAppUrl(),
       documentsBucket: !!process.env.DOCUMENTS_BUCKET,
       receiptsBucket: !!process.env.RECEIPTS_BUCKET,
-      twilio: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER),
-      email: !!(process.env.EMAIL_PROVIDER_API_KEY && process.env.EMAIL_FROM),
+      twilio: isTwilioConfigured(),
+      email: isTransactionalEmailConfigured(),
     };
 
     const { error } = await admin.from("company_settings").select("id").limit(1);

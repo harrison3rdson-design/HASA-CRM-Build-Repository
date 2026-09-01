@@ -12,6 +12,10 @@ export type EmailDeliveryResult = {
   errorMessage?: string;
 };
 
+export function isTransactionalEmailConfigured(environment = process.env): boolean {
+  return Boolean(environment.EMAIL_PROVIDER_API_KEY && environment.EMAIL_FROM);
+}
+
 /**
  * Resend-compatible HTTPS adapter.
  * Set EMAIL_PROVIDER_API_URL to another compatible endpoint if desired.

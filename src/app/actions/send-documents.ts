@@ -6,18 +6,40 @@ import { createAdminClient } from "@/lib/supabase-admin";
 import { createProposalShareLink, createAdditionalServiceShareLink } from "@/lib/public/share-links";
 import { deliverPublicLink } from "@/lib/delivery/send-document";
 import { normalizeRelatedContact, selectDefaultProposalContact } from "@/lib/proposal-contacts";
+import { resolveAppUrl } from "@/lib/app-url";
+import { isTwilioConfigured } from "@/lib/messaging/twilio";
+import { isTransactionalEmailConfigured } from "@/lib/messaging/email";
 
-function appUrl() {
-  const url = process.env.NEXT_PUBLIC_APP_URL;
-  if (!url) throw new Error("NEXT_PUBLIC_APP_URL is not configured.");
-  return url.replace(/\/$/, "");
+type SendProposalResult =
+  | { ok: true; url: string; results: Awaited<ReturnType<typeof deliverPublicLink>> }
+  | { ok: false; error: string };
+
+function requestedProviderError(method: "sms" | "email" | "both"): string | null {
+  const errors: string[] = [];
+  if ((method === "sms" || method === "both") && !isTwilioConfigured()) {
+    errors.push("Text messaging is not configured for this app. Add the HASA Twilio account settings before sending.");
+  }
+  if ((method === "email" || method === "both") && !isTransactionalEmailConfigured()) {
+    errors.push("Email delivery is not configured for this app.");
+  }
+  return errors.length ? errors.join(" ") : null;
+}
+
+function logDeliveryFailure(proposalId: string, method: string, error: string) {
+  console.error(JSON.stringify({
+    level: "error",
+    message: "Proposal delivery failed",
+    proposalId,
+    method,
+    error,
+  }));
 }
 
 export async function sendProposalAction(input: {
   proposalId: string;
   revisionId: string;
   method: "sms" | "email" | "both";
-}) {
+}): Promise<SendProposalResult> {
   await requireUser();
   const admin = createAdminClient();
 
@@ -63,24 +85,56 @@ export async function sendProposalAction(input: {
     throw new Error("Assign a Primary Contact with an email address or mobile number before sending.");
   }
 
-  const { token } = await createProposalShareLink(input.revisionId);
-  const url = `${appUrl()}/public/proposals/${token}`;
+  const providerError = requestedProviderError(input.method);
+  if (providerError) {
+    logDeliveryFailure(input.proposalId, input.method, providerError);
+    return { ok: false, error: providerError };
+  }
 
-  const results = await deliverPublicLink({
-    documentType: "proposal",
-    relatedRecordId: input.proposalId,
-    url,
-    recipientName: [contact.first_name,contact.last_name].filter(Boolean).join(" "),
-    email: contact.email,
-    mobile: contact.mobile_phone,
-    method: input.method,
-    subject: `HASA Concepts Proposal ${proposal.proposal_number}`,
-    message: `Please review proposal ${proposal.proposal_number} for ${proposal.project_name}.`,
-  });
+  let appUrl: string;
+  try {
+    appUrl = resolveAppUrl();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "The customer link could not be created.";
+    logDeliveryFailure(input.proposalId, input.method, message);
+    return { ok: false, error: message };
+  }
+
+  const { token } = await createProposalShareLink(input.revisionId);
+  const url = `${appUrl}/public/proposals/${token}`;
+
+  let results: Awaited<ReturnType<typeof deliverPublicLink>>;
+  try {
+    results = await deliverPublicLink({
+      documentType: "proposal",
+      relatedRecordId: input.proposalId,
+      url,
+      recipientName: [contact.first_name,contact.last_name].filter(Boolean).join(" "),
+      email: contact.email,
+      mobile: contact.mobile_phone,
+      method: input.method,
+      subject: `HASA Concepts Proposal ${proposal.proposal_number}`,
+      message: `Please review proposal ${proposal.proposal_number} for ${proposal.project_name}.`,
+    });
+  } catch (error) {
+    const message = error instanceof Error
+      ? error.message
+      : "The delivery provider could not be reached. The proposal remains editable and unlocked.";
+    logDeliveryFailure(input.proposalId, input.method, message);
+    return { ok: false, error: message };
+  }
 
   const delivered = results.some((result) => result.status === "sent" || result.status === "delivered");
   if (!delivered) {
-    throw new Error("The proposal was not delivered, so it remains editable and unlocked.");
+    const providerMessages = results
+      .filter((result) => result.status === "failed")
+      .map((result) => result.errorMessage)
+      .filter(Boolean);
+    const message = providerMessages.length
+      ? `${providerMessages.join(" ")} The proposal remains editable and unlocked.`
+      : "The proposal was not delivered, so it remains editable and unlocked.";
+    logDeliveryFailure(input.proposalId, input.method, message);
+    return { ok: false, error: message };
   }
 
   const { data: lockedProposalId, error: lockError } = await admin.rpc("mark_proposal_revision_sent", {
@@ -91,7 +145,7 @@ export async function sendProposalAction(input: {
 
   revalidatePath("/proposals");
   revalidatePath(`/proposals/${input.proposalId}`);
-  return { url, results };
+  return { ok: true, url, results };
 }
 
 export async function sendAdditionalServiceAction(input: {
@@ -107,7 +161,7 @@ export async function sendAdditionalServiceAction(input: {
   if (error) throw error;
 
   const { token } = await createAdditionalServiceShareLink(input.additionalServiceId);
-  const url = `${appUrl()}/public/additional-services/${token}`;
+  const url = `${resolveAppUrl()}/public/additional-services/${token}`;
   const c: any = (a as any).project?.primary_contact;
 
   const results = await deliverPublicLink({

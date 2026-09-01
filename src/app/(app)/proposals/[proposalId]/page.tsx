@@ -19,6 +19,8 @@ import type { ExpenseBillingRule } from "@/lib/proposal-items";
 import { parseProposalSectionType } from "@/lib/proposal-sections";
 import { proposalRevisionLabel } from "@/lib/proposal-revisions";
 import { money } from "@/lib/ui/format";
+import { isTwilioConfigured } from "@/lib/messaging/twilio";
+import { isTransactionalEmailConfigured } from "@/lib/messaging/email";
 
 type SectionRecord = {
   id: string;
@@ -140,6 +142,8 @@ export default async function ProposalDetailPage({
               revisionId={latest.id}
               hasEmail={Boolean(primaryContact?.email)}
               hasMobile={Boolean(primaryContact?.mobile_phone)}
+              emailConfigured={isTransactionalEmailConfigured()}
+              smsConfigured={isTwilioConfigured()}
             />
           ) : null}
           {latest && !latest.locked && latest.revision_number > 1 ? (

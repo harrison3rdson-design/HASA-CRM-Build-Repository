@@ -32,6 +32,9 @@ describe("unissued draft proposal deletion", () => {
   const migration = read(
     "supabase/migrations/20260901141024_delete_unissued_draft_proposal.sql",
   );
+  const permissionMigration = read(
+    "supabase/migrations/20260901145151_grant_draft_deletion_sequence_access.sql",
+  );
 
   it("checks external issuance rather than the mere existence of a link", () => {
     expect(migration).toContain("l.first_viewed_at is not null");
@@ -65,5 +68,15 @@ describe("unissued draft proposal deletion", () => {
     expect(proposalPage).toContain(
       "d.proposal.proposal_number === d.latestAnnualProposalNumber",
     );
+  });
+
+  it("gives only the server role the private sequence access deletion requires", () => {
+    expect(permissionMigration).toContain(
+      "grant usage on schema private to service_role",
+    );
+    expect(permissionMigration).toContain(
+      "grant select, update on table private.proposal_number_sequences to service_role",
+    );
+    expect(permissionMigration).not.toMatch(/\b(?:anon|authenticated|public)\b/);
   });
 });

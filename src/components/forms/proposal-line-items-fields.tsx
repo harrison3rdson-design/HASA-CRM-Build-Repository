@@ -134,6 +134,7 @@ export function ProposalLineItemsFields({
         <div className="line-items-list">
           {laborLines.map((line, index) => {
             const amount = calculateLaborAmount(numericValue(line.hours), numericValue(line.rate));
+            const laborLineStarted = Boolean(line.description.trim() || line.hours || line.rate);
             return (
               <div className="line-item labor-line" key={line.id}>
                 <label>
@@ -141,6 +142,7 @@ export function ProposalLineItemsFields({
                   <input
                     name={`labor_description_${index}`}
                     value={line.description}
+                    required={laborLineStarted}
                     onChange={(event) => updateLaborLine(line.id, { description: event.target.value })}
                     placeholder="Design services"
                   />
@@ -153,6 +155,7 @@ export function ProposalLineItemsFields({
                     min="0"
                     step="0.01"
                     value={line.hours}
+                    required={laborLineStarted}
                     onChange={(event) => updateLaborLine(line.id, { hours: event.target.value })}
                     placeholder="0"
                   />
@@ -165,6 +168,7 @@ export function ProposalLineItemsFields({
                     min="0"
                     step="0.01"
                     value={line.rate}
+                    required={laborLineStarted}
                     onChange={(event) => updateLaborLine(line.id, { rate: event.target.value })}
                     placeholder="$0.00"
                   />

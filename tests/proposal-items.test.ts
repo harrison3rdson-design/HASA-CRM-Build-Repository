@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   calculateExpenseAmount,
   calculateLaborAmount,
@@ -28,5 +30,25 @@ describe("proposal item calculations", () => {
   it("rejects unsupported expense billing rules", () => {
     expect(parseExpenseBillingRule("actual")).toBe("actual");
     expect(() => parseExpenseBillingRule("whatever")).toThrow(/invalid/);
+  });
+});
+
+describe("new proposal validation", () => {
+  const action = readFileSync(resolve("src/app/actions/proposals.ts"), "utf8");
+  const form = readFileSync(resolve("src/components/forms/proposal-form.tsx"), "utf8");
+  const lineItems = readFileSync(
+    resolve("src/components/forms/proposal-line-items-fields.tsx"),
+    "utf8",
+  );
+
+  it("returns expected validation messages to the form instead of an error page", () => {
+    expect(action).toContain('return { status: "error", message: validationErrorMessage(error) }');
+    expect(form).toContain("useActionState(createProposalAction");
+    expect(form).toContain('className="form-message error" role="alert"');
+  });
+
+  it("requires all labor fields only after a labor line has been started", () => {
+    expect(lineItems).toContain("const laborLineStarted = Boolean");
+    expect(lineItems.match(/required=\{laborLineStarted\}/g)).toHaveLength(3);
   });
 });

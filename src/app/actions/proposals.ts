@@ -15,6 +15,17 @@ import {
 import { parseProposalSectionType } from "@/lib/proposal-sections";
 import { selectDefaultProposalContact } from "@/lib/proposal-contacts";
 
+export type CreateProposalActionState = {
+  status: "idle" | "error";
+  message: string;
+};
+
+function validationErrorMessage(error: unknown): string {
+  return error instanceof Error
+    ? error.message
+    : "Review the proposal details and try again.";
+}
+
 function itemCount(value: FormDataEntryValue | null, label: string): number {
   const count = numberValue(value, label, { min: 0, max: 50 });
   if (!Number.isInteger(count)) throw new Error(`${label} must be a whole number.`);
@@ -125,15 +136,48 @@ function parseProposalSections(formData: FormData) {
   return sections;
 }
 
-export async function createProposalAction(formData: FormData) {
+export async function createProposalAction(
+  _previousState: CreateProposalActionState,
+  formData: FormData,
+): Promise<CreateProposalActionState> {
   const { supabase, authUser } = await requireUser();
 
-  const clientId = requiredText(formData.get("client_id"), "Client");
-  const projectName = requiredText(formData.get("project_name"), "Project name");
-  const requestedContactId = optionalText(formData.get("primary_contact_id"));
-  const scopeSections = parseProposalSections(formData);
-  const { feeItems, expenseItems, professionalFee, estimatedExpenses } = parseProposalItems(formData);
-  let paymentTerms = optionalText(formData.get("payment_terms"));
+  let proposalInput: {
+    clientId: string;
+    projectName: string;
+    requestedContactId: string | null;
+    scopeSections: ReturnType<typeof parseProposalSections>;
+    items: ReturnType<typeof parseProposalItems>;
+    paymentTerms: string | null;
+    validityDays: number;
+    billingMethod: string | null;
+  };
+
+  try {
+    proposalInput = {
+      clientId: requiredText(formData.get("client_id"), "Client"),
+      projectName: requiredText(formData.get("project_name"), "Project name"),
+      requestedContactId: optionalText(formData.get("primary_contact_id")),
+      scopeSections: parseProposalSections(formData),
+      items: parseProposalItems(formData),
+      paymentTerms: optionalText(formData.get("payment_terms")),
+      validityDays: numberValue(formData.get("validity_days"), "Validity days", { min: 1 }),
+      billingMethod: optionalText(formData.get("billing_method")),
+    };
+  } catch (error) {
+    return { status: "error", message: validationErrorMessage(error) };
+  }
+
+  const {
+    clientId,
+    projectName,
+    requestedContactId,
+    scopeSections,
+    items: { feeItems, expenseItems, professionalFee, estimatedExpenses },
+    validityDays,
+    billingMethod,
+  } = proposalInput;
+  let { paymentTerms } = proposalInput;
 
   const { data: clientContacts, error: contactsError } = await supabase
     .from("contacts")
@@ -161,6 +205,13 @@ export async function createProposalAction(formData: FormData) {
       .single();
     if (settingsError) throw settingsError;
     paymentTerms = settings.default_payment_terms;
+  }
+
+  let parsedPaymentTerms: ReturnType<typeof parsePaymentTerms>;
+  try {
+    parsedPaymentTerms = parsePaymentTerms(paymentTerms);
+  } catch (error) {
+    return { status: "error", message: validationErrorMessage(error) };
   }
 
   const { data: proposal, error: proposalError } = await supabase
@@ -195,9 +246,9 @@ export async function createProposalAction(formData: FormData) {
       revision_number: 1,
       professional_fee: professionalFee,
       estimated_expenses: estimatedExpenses,
-      payment_terms: parsePaymentTerms(paymentTerms),
-      validity_days: numberValue(formData.get("validity_days"), "Validity days", { min: 1 }),
-      billing_method: optionalText(formData.get("billing_method")),
+      payment_terms: parsedPaymentTerms,
+      validity_days: validityDays,
+      billing_method: billingMethod,
       created_by: userRecord?.id ?? null,
     })
     .select("id")

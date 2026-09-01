@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 import { createProposalAction } from "@/app/actions/proposals";
 import { ProposalLineItemsFields } from "@/components/forms/proposal-line-items-fields";
 import { ProposalScopeFields } from "@/components/forms/proposal-scope-fields";
@@ -31,11 +31,15 @@ export function ProposalForm({
 }) {
   const [selectedClientId, setSelectedClientId] = useState(initialClientId);
   const [selectedContactId, setSelectedContactId] = useState(initialContactId);
+  const [state, formAction, pending] = useActionState(createProposalAction, {
+    status: "idle" as const,
+    message: "",
+  });
   const selectedClient = clients.find((client) => client.id === selectedClientId);
   const contacts = selectedClient?.contacts ?? [];
 
   return (
-    <form action={createProposalAction} className="form-grid">
+    <form action={formAction} className="form-grid">
       {initialClientId ? (
         <div className="full inherited-selection-note" role="status">
           <strong>Client details inherited</strong>
@@ -119,8 +123,15 @@ export function ProposalForm({
 
       <ProposalLineItemsFields />
 
-      <div className="full">
-        <button className="primary-button" type="submit">Create Proposal</button>
+      <div className="full form-submit-row">
+        <button className="primary-button" type="submit" disabled={pending}>
+          {pending ? "Creating…" : "Create Proposal"}
+        </button>
+        {state.message ? (
+          <p className="form-message error" role="alert">
+            {state.message}
+          </p>
+        ) : null}
       </div>
     </form>
   );

@@ -56,10 +56,14 @@ describe("unissued draft proposal deletion", () => {
   it("exposes the destructive action only through the authenticated server flow", () => {
     const action = read("src/app/actions/proposals.ts");
     const button = read("src/components/proposals/delete-proposal-button.tsx");
+    const proposalPage = read("src/app/(app)/proposals/[proposalId]/page.tsx");
 
     expect(action).toContain("await requireUser()");
     expect(action).toContain('"delete_unissued_draft_proposal"');
     expect(button).toContain("Delete Draft Proposal");
     expect(button).toContain("window.confirm");
+    expect(proposalPage).toContain(
+      "d.proposal.proposal_number === d.latestAnnualProposalNumber",
+    );
   });
 });

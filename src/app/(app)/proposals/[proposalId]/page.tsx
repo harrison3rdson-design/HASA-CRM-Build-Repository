@@ -68,6 +68,7 @@ export default async function ProposalDetailPage({
   const canOfferProposalDeletion = Boolean(
     latest
     && d.proposal.status === "draft"
+    && d.proposal.proposal_number === d.latestAnnualProposalNumber
     && d.revisions.every((revision: { locked: boolean }) => !revision.locked)
     && d.acceptances.length === 0
   );

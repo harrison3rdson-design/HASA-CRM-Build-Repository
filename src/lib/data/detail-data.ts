@@ -30,9 +30,11 @@ export async function getProposalDetail(proposalId: string) {
 
   if (error) throw error;
 
+  const proposalYear = String(proposal.proposal_number).slice(0, 4);
   const [
     { data: revisions, error: revisionsError },
     { data: contacts, error: contactsError },
+    { data: latestAnnualProposal, error: latestAnnualProposalError },
   ] = await Promise.all([
     s.from("proposal_revisions")
       .select("*")
@@ -43,10 +45,17 @@ export async function getProposalDetail(proposalId: string) {
       .eq("client_id", proposal.client_id)
       .order("is_primary", { ascending: false })
       .order("created_at", { ascending: true }),
+    s.from("proposals")
+      .select("proposal_number")
+      .like("proposal_number", `${proposalYear}%`)
+      .order("proposal_number", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   if (revisionsError) throw revisionsError;
   if (contactsError) throw contactsError;
+  if (latestAnnualProposalError) throw latestAnnualProposalError;
 
   const revisionIds = (revisions ?? []).map(r => r.id);
 
@@ -59,6 +68,7 @@ export async function getProposalDetail(proposalId: string) {
 
   return {
     proposal,
+    latestAnnualProposalNumber: latestAnnualProposal?.proposal_number ?? null,
     contacts: contacts ?? [],
     revisions: revisions ?? [],
     sections: sections ?? [],

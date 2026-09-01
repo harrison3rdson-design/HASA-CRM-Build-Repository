@@ -96,10 +96,32 @@ export default async function ProposalDetailPage({
     <>
       <div className="page-heading">
         <div><h1>Proposal {d.proposal.proposal_number}</h1><p>{d.proposal.project_name}</p></div>
-        <div className="button-row">
+      </div>
+
+      <section className="proposal-area proposal-work-area" aria-labelledby="proposal-work-area-title">
+        <header className="proposal-area-heading">
+          <div>
+            <span className="proposal-area-eyebrow">Proposal Work Area</span>
+            <h2 id="proposal-work-area-title">Build and manage Revision {latest?.revision_number ?? ""}</h2>
+            <p>{latest?.locked
+              ? "This revision is locked because it has been sent. Create a revision to make changes."
+              : "Contact, scope, hours, rates, expenses, and terms remain editable here until the revision is sent."}</p>
+          </div>
+          <div className="button-row proposal-area-actions">
           {latest && !latest.locked && !showEditor ? (
             <Link className="secondary-button" href={`/proposals/${proposalId}?edit=1`}>
               Edit Revision
+            </Link>
+          ) : null}
+          {latest ? (
+            <Link
+              aria-label="Preview customer view (opens in a new tab)"
+              className="secondary-button"
+              href={`/proposal-previews/${proposalId}`}
+              rel="noreferrer"
+              target="_blank"
+            >
+              Preview Customer View
             </Link>
           ) : null}
           {latest && !latest.locked ? (
@@ -117,75 +139,87 @@ export default async function ProposalDetailPage({
             />
           ) : null}
           <CreateRevisionButton proposalId={proposalId} />
-        </div>
-      </div>
+          </div>
+        </header>
 
-      {latest ? (
-        <Panel title="Proposal Contact">
-          <ProposalPrimaryContactForm
-            proposalId={proposalId}
-            contacts={contacts}
-            primaryContactId={primaryContact?.id ?? ""}
-            locked={latest.locked}
-          />
+        {latest ? (
+          <Panel title="Proposal Contact">
+            <ProposalPrimaryContactForm
+              proposalId={proposalId}
+              contacts={contacts}
+              primaryContactId={primaryContact?.id ?? ""}
+              locked={latest.locked}
+            />
+          </Panel>
+        ) : null}
+
+        {showEditor && latest ? (
+          <Panel title={`Edit Revision ${latest.revision_number}`}>
+            <p className="footnote">This draft remains editable until it is sent. Sending permanently locks this revision.</p>
+            <ProposalRevisionForm
+              proposalId={proposalId}
+              revision={{
+                id: latest.id,
+                revision_number: latest.revision_number,
+                payment_terms: parsePaymentTerms(latest.payment_terms),
+                validity_days: latest.validity_days,
+                billing_method: latest.billing_method,
+              }}
+              scopeSections={scopeSections}
+              laborLines={laborLines}
+              expenseLines={expenseLines}
+            />
+          </Panel>
+        ) : null}
+
+        {latest ? (
+          <Panel title={`Revision ${latest.revision_number} Payment Terms`}>
+            <RevisionPaymentTermsForm
+              revisionId={latest.id}
+              paymentTerms={latest.payment_terms}
+              locked={latest.locked}
+            />
+            <p className="footnote">
+              Sent and accepted revisions are locked permanently. A new revision copies the prior terms and remains editable until it is sent.
+              Unlocked revisions can be deleted in reverse order, beginning with the latest revision. Revision 1 is retained as the proposal’s base revision.
+            </p>
+          </Panel>
+        ) : null}
+      </section>
+
+      <section className="proposal-area proposal-summary-area" aria-labelledby="proposal-summary-area-title">
+        <header className="proposal-area-heading">
+          <div>
+            <span className="proposal-area-eyebrow">Proposal Summary</span>
+            <h2 id="proposal-summary-area-title">Review the current customer-facing content</h2>
+            <p>Use this read-only area to confirm totals, scope, fees, expenses, terms, and revision history.</p>
+          </div>
+          <span className="proposal-area-badge">Read-only review</span>
+        </header>
+
+        {latest ? <ProposalSummary revision={latest} /> : null}
+
+        <Panel title="Revision History">
+          <div className="table-wrap"><table><thead><tr><th>Revision</th><th>Date</th><th>Fee</th><th>Expenses</th><th>Total</th><th>Terms</th><th>Locked</th></tr></thead>
+          <tbody>{d.revisions.map((r:any)=><tr key={r.id}><td>R{r.revision_number}</td><td>{r.revision_date}</td><td>{money(r.professional_fee)}</td><td>{money(r.estimated_expenses)}</td><td>{money(r.estimated_total)}</td><td>{r.payment_terms}</td><td>{r.locked?"Yes":"No"}</td></tr>)}</tbody></table></div>
         </Panel>
-      ) : null}
 
-      {showEditor && latest ? (
-        <Panel title={`Edit Revision ${latest.revision_number}`}>
-          <p className="footnote">This draft remains editable until it is sent. Sending permanently locks this revision.</p>
-          <ProposalRevisionForm
-            proposalId={proposalId}
-            revision={{
-              id: latest.id,
-              revision_number: latest.revision_number,
-              payment_terms: parsePaymentTerms(latest.payment_terms),
-              validity_days: latest.validity_days,
-              billing_method: latest.billing_method,
-            }}
-            scopeSections={scopeSections}
-            laborLines={laborLines}
-            expenseLines={expenseLines}
-          />
-        </Panel>
-      ) : null}
+        {latest ? <>
+          <Panel title="Scope">
+            {d.sections.filter((s:any)=>s.proposal_revision_id===latest.id).map((s:any)=><div key={s.id} className="scope-block"><h3>{s.heading??s.section_type}</h3><p className="preline">{s.content}</p></div>)}
+          </Panel>
 
-      {latest ? <ProposalSummary revision={latest} /> : null}
+          <Panel title="Professional Fees">
+            <div className="table-wrap"><table><thead><tr><th>Description</th><th>Hours</th><th>Hourly Rate</th><th>Amount</th></tr></thead>
+            <tbody>{d.fees.filter((f:any)=>f.proposal_revision_id===latest.id).map((f:any)=><tr key={f.id}><td>{f.description}</td><td>{Number(f.quantity)}</td><td>{money(f.rate)}</td><td>{money(f.amount)}</td></tr>)}</tbody></table></div>
+          </Panel>
 
-      {latest ? (
-        <Panel title={`Revision ${latest.revision_number} Payment Terms`}>
-          <RevisionPaymentTermsForm
-            revisionId={latest.id}
-            paymentTerms={latest.payment_terms}
-            locked={latest.locked}
-          />
-          <p className="footnote">
-            Sent and accepted revisions are locked permanently. A new revision copies the prior terms and remains editable until it is sent.
-            Unlocked revisions can be deleted in reverse order, beginning with the latest revision. Revision 1 is retained as the proposal’s base revision.
-          </p>
-        </Panel>
-      ) : null}
-
-      <Panel title="Revision History">
-        <div className="table-wrap"><table><thead><tr><th>Revision</th><th>Date</th><th>Fee</th><th>Expenses</th><th>Total</th><th>Terms</th><th>Locked</th></tr></thead>
-        <tbody>{d.revisions.map((r:any)=><tr key={r.id}><td>R{r.revision_number}</td><td>{r.revision_date}</td><td>{money(r.professional_fee)}</td><td>{money(r.estimated_expenses)}</td><td>{money(r.estimated_total)}</td><td>{r.payment_terms}</td><td>{r.locked?"Yes":"No"}</td></tr>)}</tbody></table></div>
-      </Panel>
-
-      {latest ? <>
-        <Panel title="Scope">
-          {d.sections.filter((s:any)=>s.proposal_revision_id===latest.id).map((s:any)=><div key={s.id} className="scope-block"><h3>{s.heading??s.section_type}</h3><p className="preline">{s.content}</p></div>)}
-        </Panel>
-
-        <Panel title="Professional Fees">
-          <div className="table-wrap"><table><thead><tr><th>Description</th><th>Hours</th><th>Hourly Rate</th><th>Amount</th></tr></thead>
-          <tbody>{d.fees.filter((f:any)=>f.proposal_revision_id===latest.id).map((f:any)=><tr key={f.id}><td>{f.description}</td><td>{Number(f.quantity)}</td><td>{money(f.rate)}</td><td>{money(f.amount)}</td></tr>)}</tbody></table></div>
-        </Panel>
-
-        <Panel title="Estimated Expenses">
-          <div className="table-wrap"><table><thead><tr><th>Category</th><th>Description</th><th>Qty</th><th>Unit</th><th>Unit Cost</th><th>Markup</th><th>Rule</th><th>Estimate</th></tr></thead>
-          <tbody>{d.expenses.filter((e:any)=>e.proposal_revision_id===latest.id).map((e:any)=><tr key={e.id}><td>{e.category}</td><td>{e.description??"—"}</td><td>{Number(e.estimated_quantity)}</td><td>{e.unit??"—"}</td><td>{money(e.estimated_rate)}</td><td>{Number(e.markup_percent)}%</td><td>{String(e.billing_rule).replaceAll("_", " ")}</td><td>{money(e.estimated_amount)}</td></tr>)}</tbody></table></div>
-        </Panel>
-      </> : null}
+          <Panel title="Estimated Expenses">
+            <div className="table-wrap"><table><thead><tr><th>Category</th><th>Description</th><th>Qty</th><th>Unit</th><th>Unit Cost</th><th>Markup</th><th>Rule</th><th>Estimate</th></tr></thead>
+            <tbody>{d.expenses.filter((e:any)=>e.proposal_revision_id===latest.id).map((e:any)=><tr key={e.id}><td>{e.category}</td><td>{e.description??"—"}</td><td>{Number(e.estimated_quantity)}</td><td>{e.unit??"—"}</td><td>{money(e.estimated_rate)}</td><td>{Number(e.markup_percent)}%</td><td>{String(e.billing_rule).replaceAll("_", " ")}</td><td>{money(e.estimated_amount)}</td></tr>)}</tbody></table></div>
+          </Panel>
+        </> : null}
+      </section>
     </>
   );
 }

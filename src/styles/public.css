@@ -17,5 +17,15 @@ body{margin:0;background:var(--public-bg);color:var(--public-text);font-family:A
 .public-acceptance-card .accept-check input{margin-top:2px}
 .public-primary{width:100%;padding:14px;border:0;border-radius:10px;background:var(--public-brand);color:#fff;font-size:15px;font-weight:700}
 .public-status{padding-top:4px;color:var(--public-text)!important}
-@media(max-width:600px){.public-shell{padding:10px}.public-header{align-items:flex-start}.public-document,.public-acceptance-card{padding:17px}.public-document h1{font-size:22px}}
 .public-table small{display:block;margin-top:3px;color:var(--public-muted);font-size:11px;font-weight:400}
+.public-preview-shell{max-width:820px}
+.public-preview-notice{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:16px;padding:14px 16px;border:1px solid #9ec5e8;border-radius:12px;background:#edf7ff;color:#17324d}
+.public-preview-notice>div{display:grid;gap:4px}.public-preview-notice strong{font-size:14px}.public-preview-notice span{font-size:12px;line-height:1.4}
+.public-preview-back{flex:0 0 auto;padding:9px 12px;border:1px solid #7baed8;border-radius:8px;background:#fff;font-size:12px;font-weight:700}
+.public-acceptance-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.public-preview-pill{padding:5px 9px;border-radius:999px;background:#edf7ff;color:#24567d;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.public-acceptance-card fieldset{display:grid;gap:12px;margin:0;padding:0;border:0}
+.public-acceptance-preview fieldset:disabled{opacity:.72}.public-acceptance-preview input:disabled{background:#f5f6f7}
+.public-acceptance-preview .public-primary:disabled{cursor:not-allowed;background:#7d8791}
+.public-acceptance-preview .public-preview-note{padding-top:4px;color:#415466!important;font-size:11px;line-height:1.45}
+@media(max-width:600px){.public-shell{padding:10px}.public-header{align-items:flex-start}.public-document,.public-acceptance-card{padding:17px}.public-document h1{font-size:22px}.public-preview-notice{align-items:flex-start;flex-direction:column}.public-preview-back{width:100%;text-align:center}}

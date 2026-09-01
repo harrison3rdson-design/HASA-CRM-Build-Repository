@@ -1,0 +1,129 @@
+import { money } from "@/lib/ui/format";
+
+type ProposalDocumentProps = {
+  revision: {
+    revision_number: number | string;
+    professional_fee: number | string | null;
+    estimated_expenses: number | string | null;
+    estimated_total: number | string | null;
+    payment_terms: string;
+    validity_days: number | string;
+  };
+  proposal: {
+    proposal_number: string;
+    project_name: string;
+    project_location?: string | null;
+    client?: { company_name?: string | null } | null;
+  };
+  sections: Array<{
+    id: string;
+    heading?: string | null;
+    section_type: string;
+    content: string;
+  }>;
+  fees: Array<{
+    id: string;
+    description: string;
+    quantity: number | string | null;
+    rate: number | string | null;
+    amount: number | string | null;
+  }>;
+  expenses: Array<{
+    id: string;
+    category: string;
+    description?: string | null;
+    estimated_quantity: number | string | null;
+    unit?: string | null;
+    estimated_rate: number | string | null;
+    markup_percent: number | string | null;
+    estimated_amount: number | string | null;
+  }>;
+  company: {
+    display_name: string;
+    legal_name: string;
+  };
+};
+
+function quantityLabel(value: number | string | null, unit: string) {
+  const quantity = Number(value ?? 0);
+  const label = quantity === 1 ? unit : `${unit}s`;
+  return `${quantity} ${label}`;
+}
+
+export function ProposalDocument({
+  revision,
+  proposal,
+  sections,
+  fees,
+  expenses,
+  company,
+}: ProposalDocumentProps) {
+  return (
+    <>
+      <header className="public-header">
+        <div className="public-brand">
+          <strong>{company.display_name}</strong>
+          <span>{company.legal_name}</span>
+        </div>
+        <div className="public-meta">
+          Proposal #{proposal.proposal_number} · Revision {revision.revision_number}
+        </div>
+      </header>
+
+      <article className="public-document">
+        <h1>{proposal.project_name}</h1>
+        <p className="public-muted">{proposal.client?.company_name}</p>
+        {proposal.project_location ? <p>{proposal.project_location}</p> : null}
+
+        {sections.map((section) => (
+          <section key={section.id}>
+            <h2>{section.heading ?? section.section_type}</h2>
+            <p className="preline">{section.content}</p>
+          </section>
+        ))}
+
+        <section>
+          <h2>Professional Fees</h2>
+          <div className="public-table">
+            {fees.map((fee) => (
+              <div key={fee.id}>
+                <span>
+                  {fee.description}
+                  <small>{quantityLabel(fee.quantity, "hour")} × {money(fee.rate)}</small>
+                </span>
+                <strong>{money(fee.amount)}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <h2>Estimated Expenses</h2>
+          <div className="public-table">
+            {expenses.map((expense) => (
+              <div key={expense.id}>
+                <span>
+                  {expense.category}{expense.description ? ` — ${expense.description}` : ""}
+                  <small>
+                    {quantityLabel(expense.estimated_quantity, expense.unit ?? "unit")} × {money(expense.estimated_rate)}
+                    {Number(expense.markup_percent) ? ` + ${Number(expense.markup_percent)}%` : ""}
+                  </small>
+                </span>
+                <strong>{money(expense.estimated_amount)}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div className="public-totals">
+          <div><span>Professional Fee</span><strong>{money(revision.professional_fee)}</strong></div>
+          <div><span>Estimated Expenses</span><strong>{money(revision.estimated_expenses)}</strong></div>
+          <div><span>Estimated Total</span><strong>{money(revision.estimated_total)}</strong></div>
+        </div>
+
+        <p><strong>Terms:</strong> {revision.payment_terms}</p>
+        <p><strong>Valid for:</strong> {revision.validity_days} days</p>
+      </article>
+    </>
+  );
+}

@@ -21,17 +21,27 @@ type ClientOption = {
 export function ProposalForm({
   clients,
   defaultPaymentTerms,
+  initialClientId = "",
+  initialContactId = "",
 }: {
   clients: ClientOption[];
   defaultPaymentTerms: PaymentTerms;
+  initialClientId?: string;
+  initialContactId?: string;
 }) {
-  const [selectedClientId, setSelectedClientId] = useState("");
-  const [selectedContactId, setSelectedContactId] = useState("");
+  const [selectedClientId, setSelectedClientId] = useState(initialClientId);
+  const [selectedContactId, setSelectedContactId] = useState(initialContactId);
   const selectedClient = clients.find((client) => client.id === selectedClientId);
   const contacts = selectedClient?.contacts ?? [];
 
   return (
     <form action={createProposalAction} className="form-grid">
+      {initialClientId ? (
+        <div className="full inherited-selection-note" role="status">
+          <strong>Client details inherited</strong>
+          <span>The Client and Primary Contact were selected from the client record. You can change either selection before creating the proposal.</span>
+        </div>
+      ) : null}
       <label>
         Proposal Number
         <input value="Assigned automatically when saved" readOnly aria-describedby="proposal-number-help" />

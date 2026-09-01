@@ -7,6 +7,8 @@
 .form-grid .check input{width:auto}
 .form-grid label>span{font-size:11px;line-height:1.4;color:var(--muted)}
 .form-grid button:disabled{cursor:not-allowed;opacity:.6}
+.inherited-selection-note{display:grid;gap:4px;padding:12px 14px;border:1px solid #a9c6df;border-radius:10px;background:#f2f8fd;color:#254b69}
+.inherited-selection-note strong{font-size:13px}.inherited-selection-note span{font-size:11px;line-height:1.45;color:#526b7f}
 .form-error{font-size:12px;color:#7f1d1d;margin:8px 0 0}
 .line-items-section{display:grid;gap:14px;margin-top:10px;padding-top:20px;border-top:1px solid var(--border)}
 .line-items-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}

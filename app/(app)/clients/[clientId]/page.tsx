@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Panel } from "@/components/cards";
 import { DetailGrid, DetailItem } from "@/components/dialogs/details";
 import { ClientEditForm } from "@/components/forms/client-edit-form";
@@ -17,6 +18,11 @@ export default async function ClientDetailPage({
     <>
       <div className="page-heading">
         <div><h1>{d.client.company_name}</h1><p>Client history and relationships.</p></div>
+        {d.client.active ? (
+          <Link className="primary-button" href={`/proposals/new?clientId=${clientId}`}>
+            New Proposal for Client
+          </Link>
+        ) : null}
       </div>
 
       <Panel title="Client Information">

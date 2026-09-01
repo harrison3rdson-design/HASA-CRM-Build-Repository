@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { money } from "@/lib/ui/format";
 import { proposalRevisionLabel } from "@/lib/proposal-revisions";
 
@@ -124,6 +125,10 @@ export function ProposalDocument({
 
         <p><strong>Terms:</strong> {revision.payment_terms}</p>
         <p><strong>Valid for:</strong> {revision.validity_days} days</p>
+        <nav className="public-legal-links" aria-label="Legal information">
+          <Link href="/privacy">Privacy Policy</Link>
+          <Link href="/terms">Terms and Conditions</Link>
+        </nav>
       </article>
     </>
   );

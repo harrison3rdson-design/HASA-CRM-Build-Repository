@@ -24,6 +24,7 @@ body{margin:0;background:var(--public-bg);color:var(--public-text);font-family:A
 .public-preview-back{flex:0 0 auto;padding:9px 12px;border:1px solid #7baed8;border-radius:8px;background:#fff;font-size:12px;font-weight:700}
 .public-acceptance-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .public-preview-pill{padding:5px 9px;border-radius:999px;background:#edf7ff;color:#24567d;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.public-legal-links{display:flex;gap:14px;margin-top:24px;padding-top:16px;border-top:1px solid var(--public-border);font-size:12px;font-weight:700}.public-legal-links a{text-decoration:underline;text-underline-offset:3px}
 .public-acceptance-card fieldset{display:grid;gap:12px;margin:0;padding:0;border:0}
 .public-acceptance-preview fieldset:disabled{opacity:.72}.public-acceptance-preview input:disabled{background:#f5f6f7}
 .public-acceptance-preview .public-primary:disabled{cursor:not-allowed;background:#7d8791}

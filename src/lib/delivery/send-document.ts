@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase-admin";
 import { TwilioSmsProvider } from "@/lib/messaging/twilio";
 import { TransactionalEmailProvider } from "@/lib/messaging/email";
+import { formatTransactionalSms } from "@/lib/messaging/sms-body";
 
 export async function deliverPublicLink(input: {
   documentType: "proposal" | "additional_service" | "invoice";
@@ -19,7 +20,10 @@ export async function deliverPublicLink(input: {
   const results: any[] = [];
 
   if ((input.method === "sms" || input.method === "both") && input.mobile) {
-    const r = await sms.sendSms({ to: input.mobile, body: `${input.message}\n${input.url}` });
+    const r = await sms.sendSms({
+      to: input.mobile,
+      body: formatTransactionalSms(input.message, input.url),
+    });
     results.push({ method: "sms", address: input.mobile, ...r });
   }
 

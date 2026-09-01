@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { hasAppUrl, resolveAppUrl } from "../src/lib/app-url";
 import { isTwilioConfigured } from "../src/lib/messaging/twilio";
+import { formatTransactionalSms } from "../src/lib/messaging/sms-body";
 
 describe("proposal delivery configuration", () => {
   it("uses Vercel's stable production domain when no custom app URL is set", () => {
@@ -25,6 +26,26 @@ describe("proposal delivery configuration", () => {
       TWILIO_AUTH_TOKEN: "token",
       TWILIO_FROM_NUMBER: "+15550100",
     })).toBe(true);
+  });
+
+  it("identifies the brand and includes opt-out instructions in every SMS", () => {
+    expect(formatTransactionalSms(
+      "Please review proposal 20260153 for Sample Project.",
+      "https://hasa-concepts-management.vercel.app/public/proposals/token",
+    )).toBe(
+      "HASA Concepts: Please review proposal 20260153 for Sample Project.\n" +
+      "https://hasa-concepts-management.vercel.app/public/proposals/token\n" +
+      "Reply STOP to opt out.",
+    );
+  });
+
+  it("normalizes accidental surrounding whitespace without changing the secure link", () => {
+    expect(formatTransactionalSms(" Invoice 20260153 is available for review. ", " https://example.com/document "))
+      .toBe(
+        "HASA Concepts: Invoice 20260153 is available for review.\n" +
+        "https://example.com/document\n" +
+        "Reply STOP to opt out.",
+      );
   });
 
   it("returns expected send failures to the client instead of throwing an error page", () => {

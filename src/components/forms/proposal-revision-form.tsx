@@ -7,11 +7,16 @@ import {
   type ExpenseLineValue,
   type LaborLineValue,
 } from "@/components/forms/proposal-line-items-fields";
+import {
+  ProposalScopeFields,
+  type ScopeSectionValue,
+} from "@/components/forms/proposal-scope-fields";
 import { PAYMENT_TERMS, type PaymentTerms } from "@/lib/payment-terms";
 
 export function ProposalRevisionForm({
   proposalId,
   revision,
+  scopeSections,
   laborLines,
   expenseLines,
 }: {
@@ -23,6 +28,7 @@ export function ProposalRevisionForm({
     validity_days: number;
     billing_method: string | null;
   };
+  scopeSections: ScopeSectionValue[];
   laborLines: LaborLineValue[];
   expenseLines: ExpenseLineValue[];
 }) {
@@ -52,6 +58,8 @@ export function ProposalRevisionForm({
           <option value="time_and_materials">Time and materials</option>
         </select>
       </label>
+
+      <ProposalScopeFields initialSections={scopeSections} />
 
       <ProposalLineItemsFields
         initialLaborLines={laborLines}

@@ -2,6 +2,7 @@
 
 import { createProposalAction } from "@/app/actions/proposals";
 import { ProposalLineItemsFields } from "@/components/forms/proposal-line-items-fields";
+import { ProposalScopeFields } from "@/components/forms/proposal-scope-fields";
 import { PAYMENT_TERMS, type PaymentTerms } from "@/lib/payment-terms";
 
 type ClientOption = {
@@ -62,6 +63,8 @@ export function ProposalForm({
           <option value="time_and_materials">Time and materials</option>
         </select>
       </label>
+
+      <ProposalScopeFields />
 
       <ProposalLineItemsFields />
 

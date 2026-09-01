@@ -9,7 +9,16 @@ import { ProposalRevisionForm } from "@/components/forms/proposal-revision-form"
 import { getProposalDetail } from "@/lib/data/detail-data";
 import { parsePaymentTerms } from "@/lib/payment-terms";
 import type { ExpenseBillingRule } from "@/lib/proposal-items";
+import { parseProposalSectionType } from "@/lib/proposal-sections";
 import { money } from "@/lib/ui/format";
+
+type SectionRecord = {
+  id: string;
+  proposal_revision_id: string;
+  section_type: string;
+  heading: string | null;
+  content: string;
+};
 
 type FeeRecord = {
   id: string;
@@ -44,6 +53,14 @@ export default async function ProposalDetailPage({
   const d = await getProposalDetail(proposalId);
   const latest = d.revisions[0];
   const showEditor = Boolean(latest && !latest.locked && edit !== "0");
+  const scopeSections = latest ? (d.sections as SectionRecord[])
+    .filter((section) => section.proposal_revision_id === latest.id)
+    .map((section) => ({
+      id: section.id,
+      sectionType: parseProposalSectionType(section.section_type),
+      heading: String(section.heading ?? ""),
+      content: section.content,
+    })) : [];
   const laborLines = latest ? (d.fees as FeeRecord[])
     .filter((fee) => fee.proposal_revision_id === latest.id)
     .map((fee) => ({
@@ -106,6 +123,7 @@ export default async function ProposalDetailPage({
               validity_days: latest.validity_days,
               billing_method: latest.billing_method,
             }}
+            scopeSections={scopeSections}
             laborLines={laborLines}
             expenseLines={expenseLines}
           />

@@ -12,6 +12,7 @@ import {
   parseExpenseBillingRule,
   roundMoney,
 } from "@/lib/proposal-items";
+import { parseProposalSectionType } from "@/lib/proposal-sections";
 
 function itemCount(value: FormDataEntryValue | null, label: string): number {
   const count = numberValue(value, label, { min: 0, max: 50 });
@@ -98,11 +99,37 @@ function parseProposalItems(formData: FormData) {
   };
 }
 
+function parseProposalSections(formData: FormData) {
+  const sections = [] as Array<{
+    section_type: ReturnType<typeof parseProposalSectionType>;
+    heading: string | null;
+    content: string;
+    sort_order: number;
+  }>;
+  const scopeCount = itemCount(formData.get("scope_count"), "Scope section count");
+
+  for (let index = 0; index < scopeCount; index += 1) {
+    const heading = optionalText(formData.get(`scope_heading_${index}`));
+    const content = optionalText(formData.get(`scope_content_${index}`));
+    if (!heading && !content) continue;
+
+    sections.push({
+      section_type: parseProposalSectionType(formData.get(`scope_type_${index}`)),
+      heading,
+      content: requiredText(content, `Scope section ${index + 1} content`),
+      sort_order: index,
+    });
+  }
+
+  return sections;
+}
+
 export async function createProposalAction(formData: FormData) {
   const { supabase, authUser } = await requireUser();
 
   const clientId = requiredText(formData.get("client_id"), "Client");
   const projectName = requiredText(formData.get("project_name"), "Project name");
+  const scopeSections = parseProposalSections(formData);
   const { feeItems, expenseItems, professionalFee, estimatedExpenses } = parseProposalItems(formData);
   let paymentTerms = optionalText(formData.get("payment_terms"));
 
@@ -161,6 +188,19 @@ export async function createProposalAction(formData: FormData) {
     throw revisionError;
   }
 
+  if (scopeSections.length) {
+    const { error: scopeError } = await supabase
+      .from("proposal_sections")
+      .insert(scopeSections.map((section) => ({
+        ...section,
+        proposal_revision_id: revision.id,
+      })));
+    if (scopeError) {
+      await discardIncompleteProposal();
+      throw scopeError;
+    }
+  }
+
   if (feeItems.length) {
     const { error: feeError } = await supabase
       .from("proposal_fee_items")
@@ -217,13 +257,15 @@ export async function updateProposalRevisionAction(formData: FormData) {
   const paymentTerms = parsePaymentTerms(formData.get("payment_terms"));
   const validityDays = numberValue(formData.get("validity_days"), "Validity days", { min: 1 });
   const billingMethod = optionalText(formData.get("billing_method")) ?? "fixed_fee";
+  const scopeSections = parseProposalSections(formData);
   const { feeItems, expenseItems } = parseProposalItems(formData);
 
-  const { data: proposalId, error } = await admin.rpc("update_proposal_revision_draft", {
+  const { data: proposalId, error } = await admin.rpc("update_proposal_revision_draft_v2", {
     p_revision_id: revisionId,
     p_payment_terms: paymentTerms,
     p_validity_days: validityDays,
     p_billing_method: billingMethod,
+    p_sections: scopeSections,
     p_fee_items: feeItems,
     p_expense_items: expenseItems,
   });

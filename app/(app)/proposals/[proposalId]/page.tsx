@@ -1,25 +1,116 @@
+import Link from "next/link";
 import { Panel } from "@/components/cards";
 import { ProposalSummary } from "@/components/proposals/proposal-summary";
 import { CreateRevisionButton } from "@/components/proposals/revision-button";
+import { DeleteRevisionButton } from "@/components/proposals/delete-revision-button";
+import { SendProposalButton } from "@/components/proposals/send-proposal-button";
 import { RevisionPaymentTermsForm } from "@/components/forms/revision-payment-terms-form";
+import { ProposalRevisionForm } from "@/components/forms/proposal-revision-form";
 import { getProposalDetail } from "@/lib/data/detail-data";
+import { parsePaymentTerms } from "@/lib/payment-terms";
+import type { ExpenseBillingRule } from "@/lib/proposal-items";
 import { money } from "@/lib/ui/format";
+
+type FeeRecord = {
+  id: string;
+  proposal_revision_id: string;
+  description: string;
+  quantity: number | string | null;
+  rate: number | string | null;
+};
+
+type ExpenseRecord = {
+  id: string;
+  proposal_revision_id: string;
+  category: string;
+  description: string | null;
+  estimated_quantity: number | string | null;
+  unit: string | null;
+  estimated_rate: number | string | null;
+  billing_rule: ExpenseBillingRule;
+  markup_percent: number | string | null;
+  requires_receipt: boolean;
+};
 
 export default async function ProposalDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ proposalId: string }>;
+  searchParams: Promise<{ edit?: string }>;
 }) {
   const { proposalId } = await params;
+  const { edit } = await searchParams;
   const d = await getProposalDetail(proposalId);
   const latest = d.revisions[0];
+  const showEditor = Boolean(latest && !latest.locked && edit !== "0");
+  const laborLines = latest ? (d.fees as FeeRecord[])
+    .filter((fee) => fee.proposal_revision_id === latest.id)
+    .map((fee) => ({
+      id: fee.id,
+      description: fee.description,
+      hours: String(fee.quantity ?? ""),
+      rate: String(fee.rate ?? ""),
+    })) : [];
+  const expenseLines = latest ? (d.expenses as ExpenseRecord[])
+    .filter((expense) => expense.proposal_revision_id === latest.id)
+    .map((expense) => ({
+      id: expense.id,
+      category: expense.category,
+      description: String(expense.description ?? ""),
+      quantity: String(expense.estimated_quantity ?? "1"),
+      unit: String(expense.unit ?? ""),
+      rate: String(expense.estimated_rate ?? ""),
+      billingRule: expense.billing_rule,
+      markupPercent: String(expense.markup_percent ?? "0"),
+      requiresReceipt: Boolean(expense.requires_receipt),
+    })) : [];
 
   return (
     <>
       <div className="page-heading">
         <div><h1>Proposal {d.proposal.proposal_number}</h1><p>{d.proposal.project_name}</p></div>
-        <CreateRevisionButton proposalId={proposalId} />
+        <div className="button-row">
+          {latest && !latest.locked && !showEditor ? (
+            <Link className="secondary-button" href={`/proposals/${proposalId}?edit=1`}>
+              Edit Revision
+            </Link>
+          ) : null}
+          {latest && !latest.locked ? (
+            <SendProposalButton
+              proposalId={proposalId}
+              revisionId={latest.id}
+              hasEmail={Boolean(d.proposal.primary_contact?.email)}
+              hasMobile={Boolean(d.proposal.primary_contact?.mobile_phone)}
+            />
+          ) : null}
+          {latest && !latest.locked && latest.revision_number > 1 ? (
+            <DeleteRevisionButton
+              proposalId={proposalId}
+              revisionNumber={latest.revision_number}
+            />
+          ) : null}
+          <CreateRevisionButton proposalId={proposalId} />
+        </div>
       </div>
+
+      {showEditor && latest ? (
+        <Panel title={`Edit Revision ${latest.revision_number}`}>
+          <p className="footnote">This draft remains editable until it is sent. Sending permanently locks this revision.</p>
+          <ProposalRevisionForm
+            proposalId={proposalId}
+            revision={{
+              id: latest.id,
+              revision_number: latest.revision_number,
+              payment_terms: parsePaymentTerms(latest.payment_terms),
+              validity_days: latest.validity_days,
+              billing_method: latest.billing_method,
+            }}
+            laborLines={laborLines}
+            expenseLines={expenseLines}
+          />
+        </Panel>
+      ) : null}
 
       {latest ? <ProposalSummary revision={latest} /> : null}
 
@@ -31,7 +122,8 @@ export default async function ProposalDetailPage({
             locked={latest.locked}
           />
           <p className="footnote">
-            Accepted revisions are locked permanently. New revisions copy the prior revision’s terms and can be changed before acceptance.
+            Sent and accepted revisions are locked permanently. A new revision copies the prior terms and remains editable until it is sent.
+            Unlocked revisions can be deleted in reverse order, beginning with the latest revision. Revision 1 is retained as the proposal’s base revision.
           </p>
         </Panel>
       ) : null}
@@ -47,13 +139,13 @@ export default async function ProposalDetailPage({
         </Panel>
 
         <Panel title="Professional Fees">
-          <div className="table-wrap"><table><thead><tr><th>Description</th><th>Type</th><th>Amount</th></tr></thead>
-          <tbody>{d.fees.filter((f:any)=>f.proposal_revision_id===latest.id).map((f:any)=><tr key={f.id}><td>{f.description}</td><td>{f.billing_type}</td><td>{money(f.amount)}</td></tr>)}</tbody></table></div>
+          <div className="table-wrap"><table><thead><tr><th>Description</th><th>Hours</th><th>Hourly Rate</th><th>Amount</th></tr></thead>
+          <tbody>{d.fees.filter((f:any)=>f.proposal_revision_id===latest.id).map((f:any)=><tr key={f.id}><td>{f.description}</td><td>{Number(f.quantity)}</td><td>{money(f.rate)}</td><td>{money(f.amount)}</td></tr>)}</tbody></table></div>
         </Panel>
 
         <Panel title="Estimated Expenses">
-          <div className="table-wrap"><table><thead><tr><th>Category</th><th>Description</th><th>Rule</th><th>Estimate</th></tr></thead>
-          <tbody>{d.expenses.filter((e:any)=>e.proposal_revision_id===latest.id).map((e:any)=><tr key={e.id}><td>{e.category}</td><td>{e.description??"—"}</td><td>{e.billing_rule}</td><td>{money(e.estimated_amount)}</td></tr>)}</tbody></table></div>
+          <div className="table-wrap"><table><thead><tr><th>Category</th><th>Description</th><th>Qty</th><th>Unit</th><th>Unit Cost</th><th>Markup</th><th>Rule</th><th>Estimate</th></tr></thead>
+          <tbody>{d.expenses.filter((e:any)=>e.proposal_revision_id===latest.id).map((e:any)=><tr key={e.id}><td>{e.category}</td><td>{e.description??"—"}</td><td>{Number(e.estimated_quantity)}</td><td>{e.unit??"—"}</td><td>{money(e.estimated_rate)}</td><td>{Number(e.markup_percent)}%</td><td>{String(e.billing_rule).replaceAll("_", " ")}</td><td>{money(e.estimated_amount)}</td></tr>)}</tbody></table></div>
         </Panel>
       </> : null}
     </>

@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { createClockSkewRetryFetch } from "@/lib/supabase-clock-skew";
 
 export function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -12,6 +13,9 @@ export function createAdminClient() {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
+    },
+    global: {
+      fetch: createClockSkewRetryFetch(),
     },
   });
 }

@@ -33,4 +33,13 @@ describe("serverless PDF renderer", () => {
       expect(source).toContain('"Cache-Control": "private, no-store"');
     }
   });
+
+  it("provides an owner-only browser health page for production verification", () => {
+    const route = read("app/(app)/internal/health/pdf/page.tsx");
+
+    expect(route).toContain("await Policies.companySettings()");
+    expect(route).toContain("renderHtmlToPdf");
+    expect(route).toContain('export const dynamic = "force-dynamic"');
+    expect(route).toContain("PDF renderer ready");
+  });
 });

@@ -4,7 +4,7 @@ import { money } from "@/lib/ui/format";
 
 function esc(v:any){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c] as string));}
 
-export async function generateInvoicePdf(invoiceId: string) {
+export async function generateInvoicePdf(invoiceId: string, options?: { dueDate?: string }) {
   const admin = createAdminClient();
 
   const [{ data: invoice, error }, { data: items }, { data: company }] = await Promise.all([
@@ -13,6 +13,10 @@ export async function generateInvoicePdf(invoiceId: string) {
     admin.from("company_settings").select("*").limit(1).single(),
   ]);
   if(error) throw error;
+
+  const renderedInvoice = options?.dueDate
+    ? { ...invoice, due_date: options.dueDate }
+    : invoice;
 
   const rows=(items??[]).map((x:any)=>`<tr><td>${esc(x.description)}</td><td>${x.quantity}</td><td>${money(x.rate)}</td><td>${money(x.amount)}</td></tr>`).join("");
 
@@ -23,7 +27,7 @@ export async function generateInvoicePdf(invoiceId: string) {
   </style></head><body><header><div><strong>${esc(company.display_name)}</strong><br>${esc(company.email??"")}</div><div><h1>INVOICE</h1><strong>${esc(invoice.invoice_number)}</strong></div></header>
   <p><strong>Bill To:</strong><br>${esc(invoice.client?.company_name)}</p>
   <p><strong>Project:</strong> ${esc(invoice.project?.project_number)} — ${esc(invoice.project?.project_name)}<br>
-  <strong>Invoice Date:</strong> ${esc(invoice.invoice_date)}<br><strong>Due Date:</strong> ${esc(invoice.due_date??"")}<br><strong>Terms:</strong> ${esc(invoice.payment_terms)}</p>
+  <strong>Invoice Date:</strong> ${esc(renderedInvoice.invoice_date)}<br><strong>Due Date:</strong> ${esc(renderedInvoice.due_date??"")}<br><strong>Terms:</strong> ${esc(renderedInvoice.payment_terms)}</p>
   <table><thead><tr><th>Description</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table>
   <div class="totals"><div><span>Subtotal</span><span>${money(invoice.subtotal)}</span></div><div><span>Tax</span><span>${money(invoice.tax)}</span></div><div><span>Total</span><span>${money(invoice.total)}</span></div><div><span>Paid</span><span>${money(invoice.amount_paid)}</span></div><div class="balance"><span>Balance Due</span><span>${money(invoice.balance_due)}</span></div></div>
   <p>${esc(invoice.customer_notes??"")}</p></body></html>`;
@@ -35,5 +39,5 @@ export async function generateInvoicePdf(invoiceId: string) {
     .upload(path,pdf.bytes,{contentType:"application/pdf",upsert:true});
   if(uploadError) throw uploadError;
 
-  return {path,sha256:pdf.sha256,invoice};
+  return {path,sha256:pdf.sha256,invoice:renderedInvoice};
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createInvoiceAction } from "@/app/actions/invoices";
 import { PAYMENT_TERMS, type PaymentTerms } from "@/lib/payment-terms";
+import { getPaymentTermDays } from "@/lib/invoices/due-date";
 
 type ProjectOption = {
   id: string;
@@ -52,7 +53,6 @@ export function InvoiceForm({
         </select>
       </label>
       <label>Invoice Date<input name="invoice_date" type="date" defaultValue={invoiceDate} required /></label>
-      <label>Due Date<input name="due_date" type="date" /></label>
       <label>Payment Terms
         <select
           name="payment_terms"
@@ -64,6 +64,11 @@ export function InvoiceForm({
         </select>
         <span>Defaults from the accepted proposal revision for the selected project.</span>
       </label>
+      <div className="project-context">
+        <span>Due Date</span>
+        <strong>Calculated when sent</strong>
+        <small>{paymentTerms} means {getPaymentTermDays(paymentTerms)} calendar days after the invoice is sent to the customer.</small>
+      </div>
       <label className="full">Customer Notes<textarea name="customer_notes" rows={3} /></label>
       <label className="check full">
         <input name="include_unbilled_work" type="checkbox" defaultChecked />

@@ -57,7 +57,7 @@ export async function createInvoiceAction(formData: FormData) {
       client_id: project.client_id,
       invoice_type: requiredText(formData.get("invoice_type"), "Invoice type"),
       invoice_date: requiredText(formData.get("invoice_date"), "Invoice date"),
-      due_date: optionalText(formData.get("due_date")),
+      due_date: null,
       payment_terms: parsePaymentTerms(optionalText(formData.get("payment_terms")) ?? inheritedPaymentTerms),
       customer_notes: optionalText(formData.get("customer_notes")),
       internal_notes: optionalText(formData.get("internal_notes")),

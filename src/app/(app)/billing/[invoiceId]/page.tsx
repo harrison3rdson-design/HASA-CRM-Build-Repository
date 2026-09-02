@@ -51,7 +51,7 @@ export default async function InvoiceDetailPage({
 
         <Panel title="Invoice Details">
           <p><strong>Date:</strong> {d.invoice.invoice_date}</p>
-          <p><strong>Due:</strong> {d.invoice.due_date ?? "—"}</p>
+          <p><strong>Due:</strong> {d.invoice.due_date ?? `Calculated when sent (${d.invoice.payment_terms})`}</p>
           <p><strong>Terms:</strong> {d.invoice.payment_terms}</p>
           <p><strong>Receipt Appendix:</strong> {d.invoice.include_receipt_appendix ? "Yes" : "No"}</p>
         </Panel>

@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase-admin";
 import { requiredText, optionalText, numberValue, boolValue } from "@/lib/validation/common";
 import { parsePaymentTerms } from "@/lib/payment-terms";
 import { roundHoursUp } from "@/lib/time-increments";
+import { Policies } from "@/lib/auth/action-policy";
 
 export async function createInvoiceAction(formData: FormData) {
   await requireUser();
@@ -138,4 +139,54 @@ export async function recordPaymentAction(formData: FormData) {
 
   if (error) throw error;
   revalidatePath("/billing");
+}
+
+export async function deleteUnissuedDraftInvoiceAction(invoiceId: string) {
+  const startedAt = Date.now();
+  console.log(JSON.stringify({
+    level: "info",
+    message: "Draft invoice deletion started",
+    action: "deleteUnissuedDraftInvoiceAction",
+  }));
+  await Policies.invoiceWrite();
+  const admin = createAdminClient();
+
+  const { data, error } = await admin.rpc("delete_unissued_draft_invoice", {
+    p_invoice_id: invoiceId,
+  });
+
+  if (error) {
+    console.error(JSON.stringify({
+      level: "error",
+      message: "Draft invoice deletion failed",
+      action: "deleteUnissuedDraftInvoiceAction",
+      error: error.message,
+      duration_ms: Date.now() - startedAt,
+    }));
+    throw error;
+  }
+
+  const deleted = data as {
+    invoice_number?: unknown;
+    project_id?: unknown;
+  } | null;
+  if (
+    typeof deleted?.invoice_number !== "string"
+    || typeof deleted?.project_id !== "string"
+  ) {
+    throw new Error("The invoice could not be deleted.");
+  }
+
+  revalidatePath("/billing");
+  revalidatePath(`/projects/${deleted.project_id}`);
+  console.log(JSON.stringify({
+    level: "info",
+    message: "Draft invoice deletion completed",
+    action: "deleteUnissuedDraftInvoiceAction",
+    duration_ms: Date.now() - startedAt,
+  }));
+  return {
+    invoiceNumber: deleted.invoice_number,
+    projectId: deleted.project_id,
+  };
 }

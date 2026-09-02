@@ -156,5 +156,20 @@ export async function getInvoiceDetail(invoiceId: string) {
     ]);
 
   if (error) throw error;
-  return { invoice, items: items ?? [], payments: payments ?? [], deliveries: deliveries ?? [] };
+  const { data: latestProjectInvoice, error: latestInvoiceError } = await s
+    .from("invoices")
+    .select("invoice_number")
+    .eq("project_id", invoice.project_id)
+    .order("invoice_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (latestInvoiceError) throw latestInvoiceError;
+
+  return {
+    invoice,
+    latestProjectInvoiceNumber: latestProjectInvoice?.invoice_number ?? null,
+    items: items ?? [],
+    payments: payments ?? [],
+    deliveries: deliveries ?? [],
+  };
 }

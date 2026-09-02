@@ -1,6 +1,7 @@
 import { Panel } from "@/components/cards";
 import { InvoiceSummary } from "@/components/billing/invoice-summary";
 import { IssueInvoiceButton } from "@/components/billing/issue-invoice-button";
+import { DeleteInvoiceButton } from "@/components/billing/delete-invoice-button";
 import { PaymentForm } from "@/components/forms/payment-form";
 import { getInvoiceDetail } from "@/lib/data/detail-data";
 import { money } from "@/lib/ui/format";
@@ -12,12 +13,27 @@ export default async function InvoiceDetailPage({
 }) {
   const { invoiceId } = await params;
   const d = await getInvoiceDetail(invoiceId);
+  const canDeleteDraft = d.invoice.status === "draft"
+    && !d.invoice.locked
+    && !d.invoice.issued_at
+    && !d.invoice.sent_at
+    && d.payments.length === 0
+    && d.invoice.invoice_number === d.latestProjectInvoiceNumber;
 
   return (
     <>
       <div className="page-heading">
         <div><h1>Invoice {d.invoice.invoice_number}</h1><p>{d.invoice.client?.company_name} · {d.invoice.project?.project_name}</p></div>
-        {d.invoice.status === "draft" ? <IssueInvoiceButton invoiceId={invoiceId} /> : null}
+        <div className="button-row">
+          {canDeleteDraft ? (
+            <DeleteInvoiceButton
+              invoiceId={invoiceId}
+              invoiceNumber={d.invoice.invoice_number}
+              projectId={d.invoice.project_id}
+            />
+          ) : null}
+          {d.invoice.status === "draft" ? <IssueInvoiceButton invoiceId={invoiceId} /> : null}
+        </div>
       </div>
 
       <InvoiceSummary invoice={d.invoice} />

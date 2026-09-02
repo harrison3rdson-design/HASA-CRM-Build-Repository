@@ -23,7 +23,7 @@ export default async function AdditionalServiceDetailPage({
   const contact = Array.isArray(project?.primary_contact)
     ? project.primary_contact[0]
     : project?.primary_contact;
-  const acceptance = Array.isArray(a.acceptances) ? a.acceptances[0] : null;
+  const acceptance = Array.isArray(a.acceptances) ? a.acceptances[0] : a.acceptances;
   const editable = a.status === "draft" && !a.locked;
   const executedPdfUrl = a.executed_pdf_path
     ? await createSignedDocumentUrl(a.executed_pdf_path, 60 * 60)
@@ -142,4 +142,3 @@ export default async function AdditionalServiceDetailPage({
     </>
   );
 }
-

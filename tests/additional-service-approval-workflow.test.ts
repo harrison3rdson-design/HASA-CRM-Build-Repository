@@ -27,6 +27,14 @@ describe("additional service approval workflow", () => {
     expect(detail).toContain("Delivery History");
   });
 
+  it("displays approval details when Supabase returns the one-to-one acceptance as an object", () => {
+    const project = read("app/(app)/projects/[projectId]/page.tsx");
+    const detail = read("app/(app)/additional-services/[authorizationId]/page.tsx");
+
+    expect(project).toContain("Array.isArray(a.acceptances)?a.acceptances[0]:a.acceptances");
+    expect(detail).toContain("Array.isArray(a.acceptances) ? a.acceptances[0] : a.acceptances");
+  });
+
   it("uses the same authorization document for preview and customer delivery", () => {
     const preview = read("app/additional-service-previews/[authorizationId]/page.tsx");
     const customer = read("app/public/additional-services/[token]/page.tsx");
@@ -48,6 +56,7 @@ describe("additional service approval workflow", () => {
 
   it("keeps duplicate route implementations aligned", () => {
     for (const path of [
+      "(app)/projects/[projectId]/page.tsx",
       "(app)/additional-services/[authorizationId]/page.tsx",
       "additional-service-previews/[authorizationId]/page.tsx",
       "public/additional-services/[token]/page.tsx",

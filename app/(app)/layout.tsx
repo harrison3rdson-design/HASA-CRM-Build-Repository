@@ -9,7 +9,7 @@ import "@/styles/phase7-details.css";
 
 const nav = [
   ["Dashboard","/dashboard"],["Clients","/clients"],["Proposals","/proposals"],
-  ["Projects","/projects"],["Time","/time"],["Expenses","/expenses"],
+  ["Projects","/projects"],
   ["Receipt Inbox","/receipts"],["Billing","/billing"],["Documents","/documents"],
   ["Reports","/reports"],["Settings","/settings"]
 ];

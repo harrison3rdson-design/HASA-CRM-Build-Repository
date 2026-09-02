@@ -153,7 +153,7 @@ export function ProposalLineItemsFields({
                     name={`labor_hours_${index}`}
                     type="number"
                     min="0"
-                    step="0.01"
+                    step="0.5"
                     value={line.hours}
                     required={laborLineStarted}
                     onChange={(event) => updateLaborLine(line.id, { hours: event.target.value })}

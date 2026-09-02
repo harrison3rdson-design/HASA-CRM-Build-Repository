@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Panel } from "@/components/cards";
 import { ExpenseForm } from "@/components/forms/expense-form";
-import { getExpenses, getProjectOptions } from "@/lib/data/app-data";
+import { getExpenses, getProjectWorkOptions } from "@/lib/data/app-data";
 import { money } from "@/lib/ui/format";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ export default async function ExpensesPage({
   searchParams: Promise<{ projectId?: string }>;
 }) {
   const { projectId } = await searchParams;
-  const [rows, projects] = await Promise.all([getExpenses(), getProjectOptions()]);
+  const [rows, projects] = await Promise.all([getExpenses(), getProjectWorkOptions()]);
   const expenseDate = new Date().toISOString().slice(0, 10);
   const returnTo = projectId ? `/projects/${projectId}` : undefined;
 

@@ -8,6 +8,20 @@ import { requiredText, optionalText, numberValue, boolValue } from "@/lib/valida
 import { calculateExpenseBillableAmount } from "@/lib/billing";
 import { receiptStoragePath } from "@/lib/storage/private-storage";
 
+type ExpenseRule = "actual" | "actual_plus_markup" | "fixed_rate" | "per_diem" | "mileage" | "allowance" | "included" | "not_billable";
+
+async function proposalExpenseSnapshot(supabase: any, projectId: string, formData: FormData) {
+  const sourceEstimateId = optionalText(formData.get("source_estimate_id"));
+  if (!sourceEstimateId) return null;
+  const { data: project, error: projectError } = await supabase.from("projects").select("source_revision_id").eq("id", projectId).single();
+  if (projectError) throw projectError;
+  if (!project.source_revision_id) throw new Error("This project does not have an accepted proposal revision.");
+  const { data: estimate, error: estimateError } = await supabase.from("proposal_expense_estimates").select("id,category,billing_rule,markup_percent,estimated_rate,estimated_amount").eq("id", sourceEstimateId).eq("proposal_revision_id", project.source_revision_id).maybeSingle();
+  if (estimateError) throw estimateError;
+  if (!estimate) throw new Error("The selected expense category is not part of this project's accepted proposal.");
+  return estimate;
+}
+
 export async function createExpenseAction(formData: FormData) {
   const { supabase, authUser } = await requireUser();
   const projectId = requiredText(formData.get("project_id"), "Project");
@@ -19,10 +33,11 @@ export async function createExpenseAction(formData: FormData) {
     .single();
 
   const actualCost = numberValue(formData.get("actual_cost"), "Actual cost", { min: 0 });
-  const rule = requiredText(formData.get("billing_rule"), "Billing rule") as any;
-  const billable = boolValue(formData.get("billable"));
-  const markupPercent = Number(formData.get("markup_percent") ?? 0);
-  const fixedBillableAmount = Number(formData.get("fixed_billable_amount") ?? 0);
+  const estimate = await proposalExpenseSnapshot(supabase, projectId, formData);
+  const rule = (estimate?.billing_rule ?? requiredText(formData.get("billing_rule"), "Billing rule")) as ExpenseRule;
+  const billable = !["included", "not_billable"].includes(rule) && boolValue(formData.get("billable"));
+  const markupPercent = estimate ? Number(estimate.markup_percent) : Number(formData.get("markup_percent") ?? 0);
+  const fixedBillableAmount = estimate ? Number(estimate.estimated_rate ?? estimate.estimated_amount ?? 0) : Number(formData.get("fixed_billable_amount") ?? 0);
 
   const billableAmount = billable
     ? calculateExpenseBillableAmount({ actualCost, rule, markupPercent, fixedBillableAmount })
@@ -32,9 +47,9 @@ export async function createExpenseAction(formData: FormData) {
     .from("expenses")
     .insert({
       project_id: projectId,
-      source_estimate_id: optionalText(formData.get("source_estimate_id")),
+      source_estimate_id: estimate?.id ?? null,
       expense_date: requiredText(formData.get("expense_date"), "Expense date"),
-      category: requiredText(formData.get("category"), "Category"),
+      category: estimate?.category ?? requiredText(formData.get("category"), "Category"),
       description: optionalText(formData.get("description")),
       vendor: optionalText(formData.get("vendor")),
       actual_cost: actualCost,

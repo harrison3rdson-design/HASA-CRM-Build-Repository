@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/server";
 import { requiredText, optionalText, numberValue, boolValue } from "@/lib/validation/common";
+import { roundHoursUp } from "@/lib/time-increments";
 
 async function currentAppUserId(supabase: any, authUserId: string) {
   const { data, error } = await supabase
@@ -15,22 +16,37 @@ async function currentAppUserId(supabase: any, authUserId: string) {
   return data;
 }
 
+async function proposalFeeSnapshot(supabase: any, projectId: string, formData: FormData) {
+  const sourceFeeItemId = optionalText(formData.get("source_fee_item_id"));
+  if (!sourceFeeItemId) return null;
+  const { data: project, error: projectError } = await supabase.from("projects").select("source_revision_id").eq("id", projectId).single();
+  if (projectError) throw projectError;
+  if (!project.source_revision_id) throw new Error("This project does not have an accepted proposal revision.");
+  const { data: feeItem, error: feeError } = await supabase.from("proposal_fee_items").select("id,description,rate").eq("id", sourceFeeItemId).eq("proposal_revision_id", project.source_revision_id).maybeSingle();
+  if (feeError) throw feeError;
+  if (!feeItem) throw new Error("The selected labor category is not part of this project's accepted proposal.");
+  return feeItem;
+}
+
 export async function startTimerAction(formData: FormData) {
   const { supabase, authUser } = await requireUser();
   const user = await currentAppUserId(supabase, authUser.id);
+  const projectId = requiredText(formData.get("project_id"), "Project");
+  const feeItem = await proposalFeeSnapshot(supabase, projectId, formData);
 
   const { data, error } = await supabase
     .from("time_entries")
     .insert({
-      project_id: requiredText(formData.get("project_id"), "Project"),
+      project_id: projectId,
+      source_fee_item_id: feeItem?.id ?? null,
       phase_id: optionalText(formData.get("phase_id")),
       user_id: user.id,
       work_date: new Date().toISOString().slice(0, 10),
-      activity_type: requiredText(formData.get("activity_type"), "Activity"),
+      activity_type: feeItem?.description ?? requiredText(formData.get("activity_type"), "Activity"),
       description: optionalText(formData.get("description")),
       hours: 0,
       billable: boolValue(formData.get("billable")),
-      billing_rate: numberValue(formData.get("billing_rate") ?? user.default_bill_rate ?? 0, "Billing rate", { min: 0 }),
+      billing_rate: feeItem ? Number(feeItem.rate) : numberValue(formData.get("billing_rate") ?? user.default_bill_rate ?? 0, "Billing rate", { min: 0 }),
       internal_cost_rate: numberValue(formData.get("internal_cost_rate") ?? user.internal_cost_rate ?? 0, "Internal cost rate", { min: 0 }),
       is_travel_time: boolValue(formData.get("is_travel_time")),
       timer_started_at: new Date().toISOString(),
@@ -59,7 +75,7 @@ export async function stopTimerAction(timeEntryId: string) {
   const stop = new Date();
   const start = new Date(entry.timer_started_at);
   const rawHours = Math.max((stop.getTime() - start.getTime()) / 3600000, 0);
-  const roundedHours = Math.round(rawHours * 100) / 100;
+  const roundedHours = roundHoursUp(rawHours);
 
   const { error: updateError } = await supabase
     .from("time_entries")
@@ -77,17 +93,19 @@ export async function addManualTimeAction(formData: FormData) {
   const { supabase, authUser } = await requireUser();
   const user = await currentAppUserId(supabase, authUser.id);
   const projectId = requiredText(formData.get("project_id"), "Project");
+  const feeItem = await proposalFeeSnapshot(supabase, projectId, formData);
 
   const { error } = await supabase.from("time_entries").insert({
     project_id: projectId,
+    source_fee_item_id: feeItem?.id ?? null,
     phase_id: optionalText(formData.get("phase_id")),
     user_id: user.id,
     work_date: requiredText(formData.get("work_date"), "Work date"),
-    activity_type: requiredText(formData.get("activity_type"), "Activity"),
+    activity_type: feeItem?.description ?? requiredText(formData.get("activity_type"), "Activity"),
     description: optionalText(formData.get("description")),
-    hours: numberValue(formData.get("hours"), "Hours", { min: 0.01 }),
+    hours: roundHoursUp(numberValue(formData.get("hours"), "Hours", { min: 0.01 })),
     billable: boolValue(formData.get("billable")),
-    billing_rate: numberValue(formData.get("billing_rate") ?? user.default_bill_rate ?? 0, "Billing rate", { min: 0 }),
+    billing_rate: feeItem ? Number(feeItem.rate) : numberValue(formData.get("billing_rate") ?? user.default_bill_rate ?? 0, "Billing rate", { min: 0 }),
     internal_cost_rate: numberValue(formData.get("internal_cost_rate") ?? user.internal_cost_rate ?? 0, "Internal cost rate", { min: 0 }),
     is_travel_time: boolValue(formData.get("is_travel_time")),
   });

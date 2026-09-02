@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { requiredText, optionalText, numberValue, boolValue } from "@/lib/validation/common";
+import { roundHoursUp } from "@/lib/time-increments";
 
 export async function createInvoiceAction(formData: FormData) {
   await requireUser();
@@ -55,13 +56,15 @@ export async function addInvoiceItemAction(formData: FormData) {
   const admin = createAdminClient();
 
   const invoiceId = requiredText(formData.get("invoice_id"), "Invoice");
-  const quantity = numberValue(formData.get("quantity"), "Quantity", { min: 0 });
+  const itemType = requiredText(formData.get("item_type"), "Item type");
+  const enteredQuantity = numberValue(formData.get("quantity"), "Quantity", { min: 0 });
+  const quantity = ["hourly", "travel_time"].includes(itemType) ? roundHoursUp(enteredQuantity) : enteredQuantity;
   const rate = numberValue(formData.get("rate"), "Rate");
-  const amount = Number(formData.get("amount") ?? quantity * rate);
+  const amount = ["hourly", "travel_time"].includes(itemType) ? quantity * rate : Number(formData.get("amount") ?? quantity * rate);
 
   const { error } = await admin.from("invoice_items").insert({
     invoice_id: invoiceId,
-    item_type: requiredText(formData.get("item_type"), "Item type"),
+    item_type: itemType,
     description: requiredText(formData.get("description"), "Description"),
     quantity,
     rate,

@@ -14,6 +14,7 @@ import {
 } from "@/lib/proposal-items";
 import { parseProposalSectionType } from "@/lib/proposal-sections";
 import { selectDefaultProposalContact } from "@/lib/proposal-contacts";
+import { roundHoursUp } from "@/lib/time-increments";
 
 export type CreateProposalActionState = {
   status: "idle" | "error";
@@ -61,7 +62,7 @@ function parseProposalItems(formData: FormData) {
     const rateText = optionalText(formData.get(`labor_rate_${index}`));
     if (!description && !hoursText && !rateText) continue;
 
-    const hours = numberValue(hoursText, `Labor line ${index + 1} hours`, { min: 0 });
+    const hours = roundHoursUp(numberValue(hoursText, `Labor line ${index + 1} hours`, { min: 0 }));
     const rate = numberValue(rateText, `Labor line ${index + 1} hourly rate`, { min: 0 });
     feeItems.push({
       description: requiredText(description, `Labor line ${index + 1} description`),

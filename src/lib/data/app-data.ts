@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase-admin";
 import { parsePaymentTerms } from "@/lib/payment-terms";
+import type { ProjectWorkOption } from "@/lib/project-work-options";
 
 export async function getDashboardData(){
   const s=createAdminClient();
@@ -46,6 +47,48 @@ export async function getProjectOptions() {
     .order("project_number");
   if (error) throw error;
   return data ?? [];
+}
+
+export async function getProjectWorkOptions(): Promise<ProjectWorkOption[]> {
+  const s = createAdminClient();
+  const { data: projects, error: projectsError } = await s
+    .from("projects")
+    .select("id,project_number,project_name,source_revision_id")
+    .eq("status", "active")
+    .order("project_number");
+  if (projectsError) throw projectsError;
+
+  const revisionIds = [...new Set(
+    (projects ?? [])
+      .map((project) => project.source_revision_id)
+      .filter((id): id is string => Boolean(id)),
+  )];
+
+  const [laborResult, expenseResult] = revisionIds.length
+    ? await Promise.all([
+        s.from("proposal_fee_items")
+          .select("id,proposal_revision_id,description,billing_type,quantity,rate")
+          .in("proposal_revision_id", revisionIds)
+          .order("sort_order"),
+        s.from("proposal_expense_estimates")
+          .select("id,proposal_revision_id,category,description,estimated_rate,estimated_amount,billing_rule,markup_percent,requires_receipt")
+          .in("proposal_revision_id", revisionIds)
+          .order("sort_order"),
+      ])
+    : [{ data: [], error: null }, { data: [], error: null }];
+
+  if (laborResult.error) throw laborResult.error;
+  if (expenseResult.error) throw expenseResult.error;
+
+  return (projects ?? []).map((project) => ({
+    ...project,
+    labor_categories: (laborResult.data ?? [])
+      .filter((item) => item.proposal_revision_id === project.source_revision_id)
+      .map(({ proposal_revision_id: _revisionId, ...item }) => item),
+    expense_categories: (expenseResult.data ?? [])
+      .filter((item) => item.proposal_revision_id === project.source_revision_id)
+      .map(({ proposal_revision_id: _revisionId, ...item }) => item),
+  }));
 }
 
 export async function getCompanySettings(){

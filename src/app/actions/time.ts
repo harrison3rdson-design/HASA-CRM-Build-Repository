@@ -16,9 +16,41 @@ async function currentAppUserId(supabase: any, authUserId: string) {
   return data;
 }
 
-async function proposalFeeSnapshot(supabase: any, projectId: string, formData: FormData) {
-  const sourceFeeItemId = optionalText(formData.get("source_fee_item_id"));
-  if (!sourceFeeItemId) return null;
+async function approvedLaborSnapshot(supabase: any, projectId: string, formData: FormData) {
+  const encodedSource = optionalText(formData.get("approved_labor_source"));
+  const legacySource = optionalText(formData.get("source_fee_item_id"));
+  const [sourceKind, sourceId] = encodedSource?.split(":", 2) ?? (legacySource ? ["proposal", legacySource] : []);
+  if (!sourceId) return null;
+
+  if (sourceKind === "additional_service") {
+    const { data: item, error: itemError } = await supabase
+      .from("additional_service_labor_items")
+      .select("id,additional_service_id,description,rate")
+      .eq("id", sourceId)
+      .maybeSingle();
+    if (itemError) throw itemError;
+    if (!item) throw new Error("The selected Additional Service labor category no longer exists.");
+
+    const { data: authorization, error: authorizationError } = await supabase
+      .from("additional_services")
+      .select("project_id,status")
+      .eq("id", item.additional_service_id)
+      .maybeSingle();
+    if (authorizationError) throw authorizationError;
+    if (!authorization || authorization.project_id !== projectId || authorization.status !== "accepted") {
+      throw new Error("The selected labor category is not part of an accepted Additional Service for this project.");
+    }
+
+    return {
+      id: item.id,
+      description: item.description,
+      rate: item.rate,
+      source_fee_item_id: null,
+      source_additional_service_labor_item_id: item.id,
+    };
+  }
+
+  if (sourceKind !== "proposal") throw new Error("The approved labor source is invalid.");
 
   const { data: project, error: projectError } = await supabase
     .from("projects")
@@ -31,25 +63,30 @@ async function proposalFeeSnapshot(supabase: any, projectId: string, formData: F
   const { data: feeItem, error: feeError } = await supabase
     .from("proposal_fee_items")
     .select("id,description,rate")
-    .eq("id", sourceFeeItemId)
+    .eq("id", sourceId)
     .eq("proposal_revision_id", project.source_revision_id)
     .maybeSingle();
   if (feeError) throw feeError;
   if (!feeItem) throw new Error("The selected labor category is not part of this project's accepted proposal.");
-  return feeItem;
+  return {
+    ...feeItem,
+    source_fee_item_id: feeItem.id,
+    source_additional_service_labor_item_id: null,
+  };
 }
 
 export async function startTimerAction(formData: FormData) {
   const { supabase, authUser } = await requireUser();
   const user = await currentAppUserId(supabase, authUser.id);
   const projectId = requiredText(formData.get("project_id"), "Project");
-  const feeItem = await proposalFeeSnapshot(supabase, projectId, formData);
+  const feeItem = await approvedLaborSnapshot(supabase, projectId, formData);
 
   const { data, error } = await supabase
     .from("time_entries")
     .insert({
       project_id: projectId,
-      source_fee_item_id: feeItem?.id ?? null,
+      source_fee_item_id: feeItem?.source_fee_item_id ?? null,
+      source_additional_service_labor_item_id: feeItem?.source_additional_service_labor_item_id ?? null,
       phase_id: optionalText(formData.get("phase_id")),
       user_id: user.id,
       work_date: new Date().toISOString().slice(0, 10),
@@ -104,11 +141,12 @@ export async function addManualTimeAction(formData: FormData) {
   const { supabase, authUser } = await requireUser();
   const user = await currentAppUserId(supabase, authUser.id);
   const projectId = requiredText(formData.get("project_id"), "Project");
-  const feeItem = await proposalFeeSnapshot(supabase, projectId, formData);
+  const feeItem = await approvedLaborSnapshot(supabase, projectId, formData);
 
   const { error } = await supabase.from("time_entries").insert({
     project_id: projectId,
-    source_fee_item_id: feeItem?.id ?? null,
+    source_fee_item_id: feeItem?.source_fee_item_id ?? null,
+    source_additional_service_labor_item_id: feeItem?.source_additional_service_labor_item_id ?? null,
     phase_id: optionalText(formData.get("phase_id")),
     user_id: user.id,
     work_date: requiredText(formData.get("work_date"), "Work date"),

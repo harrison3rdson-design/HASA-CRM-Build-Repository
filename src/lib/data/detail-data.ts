@@ -85,8 +85,8 @@ export async function getProjectDetail(projectId: string) {
     await Promise.all([
       s.from("projects").select("*, client:clients(*), primary_contact:contacts(*)").eq("id", projectId).single(),
       s.from("project_phases").select("*").eq("project_id", projectId).order("sort_order"),
-      s.from("time_entries").select("*").eq("project_id", projectId).order("work_date", { ascending: false }).limit(50),
-      s.from("expenses").select("*").eq("project_id", projectId).order("expense_date", { ascending: false }).limit(50),
+      s.from("time_entries").select("*, source_additional_service_labor_item:additional_service_labor_items(additional_service:additional_services(authorization_number))").eq("project_id", projectId).order("work_date", { ascending: false }).limit(50),
+      s.from("expenses").select("*, source_additional_service_expense_item:additional_service_expense_items(additional_service:additional_services(authorization_number))").eq("project_id", projectId).order("expense_date", { ascending: false }).limit(50),
       s.from("additional_services").select("*, acceptances:additional_service_acceptances(*)").eq("project_id", projectId).order("created_at", { ascending: false }),
       s.from("invoices").select("*").eq("project_id", projectId).order("invoice_date", { ascending: false }),
       s.from("project_financial_summary").select("*").eq("project_id", projectId).single(),
@@ -128,7 +128,9 @@ export async function getAdditionalServiceDetail(additionalServiceId: string) {
         client:clients(id,company_name),
         primary_contact:contacts(id,first_name,last_name,title,email,mobile_phone)
       ),
-      acceptances:additional_service_acceptances(*)
+      acceptances:additional_service_acceptances(*),
+      labor_items:additional_service_labor_items(*),
+      expense_items:additional_service_expense_items(*)
     `).eq("id", additionalServiceId).single(),
     s.from("document_deliveries")
       .select("id,delivery_method,recipient_name,recipient_address,status,error_message,sent_at,created_at")

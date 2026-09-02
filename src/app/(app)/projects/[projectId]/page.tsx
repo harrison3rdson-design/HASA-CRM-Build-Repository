@@ -5,6 +5,14 @@ import { AdditionalServiceForm } from "@/components/forms/additional-service-for
 import { getProjectDetail } from "@/lib/data/detail-data";
 import { dateTime, money, hours } from "@/lib/ui/format";
 
+function approvedSource(row: any, relationName: string, originalSourceId: string) {
+  const relation = Array.isArray(row[relationName]) ? row[relationName][0] : row[relationName];
+  const authorization = Array.isArray(relation?.additional_service)
+    ? relation.additional_service[0]
+    : relation?.additional_service;
+  return authorization?.authorization_number ?? (row[originalSourceId] ? "Original Proposal" : "Manual");
+}
+
 export default async function ProjectDetailPage({
   params,
 }: {
@@ -45,13 +53,13 @@ export default async function ProjectDetailPage({
       </div>
 
       <Panel title="Recent Time">
-        <div className="table-wrap"><table><thead><tr><th>Date</th><th>Activity</th><th>Description</th><th>Hours</th><th>Billable</th></tr></thead>
-        <tbody>{d.time.map((t:any)=><tr key={t.id}><td>{t.work_date}</td><td>{t.activity_type}</td><td>{t.description??"—"}</td><td>{hours(t.hours)}</td><td>{t.billable?"Yes":"No"}</td></tr>)}</tbody></table></div>
+        <div className="table-wrap"><table><thead><tr><th>Date</th><th>Approved Source</th><th>Activity</th><th>Description</th><th>Hours</th><th>Billable</th></tr></thead>
+        <tbody>{d.time.map((t:any)=><tr key={t.id}><td>{t.work_date}</td><td>{approvedSource(t, "source_additional_service_labor_item", "source_fee_item_id")}</td><td>{t.activity_type}</td><td>{t.description??"—"}</td><td>{hours(t.hours)}</td><td>{t.billable?"Yes":"No"}</td></tr>)}</tbody></table></div>
       </Panel>
 
       <Panel title="Recent Expenses">
-        <div className="table-wrap"><table><thead><tr><th>Date</th><th>Category</th><th>Vendor</th><th>Actual</th><th>Billable</th></tr></thead>
-        <tbody>{d.expenses.map((e:any)=><tr key={e.id}><td>{e.expense_date}</td><td>{e.category}</td><td>{e.vendor??"—"}</td><td>{money(e.actual_cost)}</td><td>{money(e.billable_amount)}</td></tr>)}</tbody></table></div>
+        <div className="table-wrap"><table><thead><tr><th>Date</th><th>Approved Source</th><th>Category</th><th>Vendor</th><th>Actual</th><th>Billable</th></tr></thead>
+        <tbody>{d.expenses.map((e:any)=><tr key={e.id}><td>{e.expense_date}</td><td>{approvedSource(e, "source_additional_service_expense_item", "source_estimate_id")}</td><td>{e.category}</td><td>{e.vendor??"—"}</td><td>{money(e.actual_cost)}</td><td>{money(e.billable_amount)}</td></tr>)}</tbody></table></div>
       </Panel>
 
       <Panel title="Additional Services">

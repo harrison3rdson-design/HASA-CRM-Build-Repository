@@ -10,9 +10,39 @@ import { receiptStoragePath } from "@/lib/storage/private-storage";
 
 type ExpenseRule = "actual" | "actual_plus_markup" | "fixed_rate" | "per_diem" | "mileage" | "allowance" | "included" | "not_billable";
 
-async function proposalExpenseSnapshot(supabase: any, projectId: string, formData: FormData) {
-  const sourceEstimateId = optionalText(formData.get("source_estimate_id"));
-  if (!sourceEstimateId) return null;
+async function approvedExpenseSnapshot(supabase: any, projectId: string, formData: FormData) {
+  const encodedSource = optionalText(formData.get("approved_expense_source"));
+  const legacySource = optionalText(formData.get("source_estimate_id"));
+  const [sourceKind, sourceId] = encodedSource?.split(":", 2) ?? (legacySource ? ["proposal", legacySource] : []);
+  if (!sourceId) return null;
+
+  if (sourceKind === "additional_service") {
+    const { data: item, error: itemError } = await supabase
+      .from("additional_service_expense_items")
+      .select("id,additional_service_id,category,billing_rule,markup_percent,estimated_rate,estimated_amount")
+      .eq("id", sourceId)
+      .maybeSingle();
+    if (itemError) throw itemError;
+    if (!item) throw new Error("The selected Additional Service expense category no longer exists.");
+
+    const { data: authorization, error: authorizationError } = await supabase
+      .from("additional_services")
+      .select("project_id,status")
+      .eq("id", item.additional_service_id)
+      .maybeSingle();
+    if (authorizationError) throw authorizationError;
+    if (!authorization || authorization.project_id !== projectId || authorization.status !== "accepted") {
+      throw new Error("The selected expense category is not part of an accepted Additional Service for this project.");
+    }
+
+    return {
+      ...item,
+      source_estimate_id: null,
+      source_additional_service_expense_item_id: item.id,
+    };
+  }
+
+  if (sourceKind !== "proposal") throw new Error("The approved expense source is invalid.");
 
   const { data: project, error: projectError } = await supabase
     .from("projects")
@@ -25,12 +55,16 @@ async function proposalExpenseSnapshot(supabase: any, projectId: string, formDat
   const { data: estimate, error: estimateError } = await supabase
     .from("proposal_expense_estimates")
     .select("id,category,billing_rule,markup_percent,estimated_rate,estimated_amount")
-    .eq("id", sourceEstimateId)
+    .eq("id", sourceId)
     .eq("proposal_revision_id", project.source_revision_id)
     .maybeSingle();
   if (estimateError) throw estimateError;
   if (!estimate) throw new Error("The selected expense category is not part of this project's accepted proposal.");
-  return estimate;
+  return {
+    ...estimate,
+    source_estimate_id: estimate.id,
+    source_additional_service_expense_item_id: null,
+  };
 }
 
 export async function createExpenseAction(formData: FormData) {
@@ -44,7 +78,7 @@ export async function createExpenseAction(formData: FormData) {
     .single();
 
   const actualCost = numberValue(formData.get("actual_cost"), "Actual cost", { min: 0 });
-  const estimate = await proposalExpenseSnapshot(supabase, projectId, formData);
+  const estimate = await approvedExpenseSnapshot(supabase, projectId, formData);
   const rule = (estimate?.billing_rule ?? requiredText(formData.get("billing_rule"), "Billing rule")) as ExpenseRule;
   const billable = !["included", "not_billable"].includes(rule) && boolValue(formData.get("billable"));
   const markupPercent = estimate ? Number(estimate.markup_percent) : Number(formData.get("markup_percent") ?? 0);
@@ -60,7 +94,8 @@ export async function createExpenseAction(formData: FormData) {
     .from("expenses")
     .insert({
       project_id: projectId,
-      source_estimate_id: estimate?.id ?? null,
+      source_estimate_id: estimate?.source_estimate_id ?? null,
+      source_additional_service_expense_item_id: estimate?.source_additional_service_expense_item_id ?? null,
       expense_date: requiredText(formData.get("expense_date"), "Expense date"),
       category: estimate?.category ?? requiredText(formData.get("category"), "Category"),
       description: optionalText(formData.get("description")),

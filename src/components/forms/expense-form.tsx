@@ -23,15 +23,19 @@ export function ExpenseForm({
 }) {
   const selectedProject = projects.find((project) => project.id === selectedProjectId);
   const [projectId, setProjectId] = useState(selectedProjectId ?? "");
-  const [sourceEstimateId, setSourceEstimateId] = useState(selectedProject?.expense_categories[0]?.id ?? "");
+  const [sourceKey, setSourceKey] = useState(() => {
+    const category = selectedProject?.expense_categories[0];
+    return category ? `${category.source_kind}:${category.id}` : "";
+  });
   const activeProject = projects.find((project) => project.id === projectId);
-  const selectedEstimate = activeProject?.expense_categories.find((item) => item.id === sourceEstimateId);
-  const hasProposalCategories = Boolean(activeProject?.expense_categories.length);
+  const selectedEstimate = activeProject?.expense_categories.find((item) => `${item.source_kind}:${item.id}` === sourceKey);
+  const hasApprovedCategories = Boolean(activeProject?.expense_categories.length);
 
   function selectProject(nextProjectId: string) {
     const project = projects.find((item) => item.id === nextProjectId);
     setProjectId(nextProjectId);
-    setSourceEstimateId(project?.expense_categories[0]?.id ?? "");
+    const category = project?.expense_categories[0];
+    setSourceKey(category ? `${category.source_kind}:${category.id}` : "");
   }
 
   return (
@@ -47,12 +51,12 @@ export function ExpenseForm({
         </label>}
       {returnTo ? <input type="hidden" name="return_to" value={returnTo} /> : null}
       <label>Date<input name="expense_date" type="date" defaultValue={expenseDate} required /></label>
-      {hasProposalCategories ? <>
-        <label>Proposal Expense Category
-          <select name="source_estimate_id" value={sourceEstimateId} required onChange={(event) => setSourceEstimateId(event.target.value)}>
-            {activeProject?.expense_categories.map((item) => <option key={item.id} value={item.id}>{item.category}</option>)}
+      {hasApprovedCategories ? <>
+        <label>Approved Expense Category
+          <select name="approved_expense_source" value={sourceKey} required onChange={(event) => setSourceKey(event.target.value)}>
+            {activeProject?.expense_categories.map((item) => <option key={`${item.source_kind}:${item.id}`} value={`${item.source_kind}:${item.id}`}>{item.source_label} — {item.category}</option>)}
           </select>
-          <span>From the accepted proposal.</span>
+          <span>From the accepted proposal or an accepted Additional Service.</span>
         </label>
         <div className="project-context"><span>Billing Rule</span><strong>{selectedEstimate ? readableRule(selectedEstimate.billing_rule) : "—"}</strong><small>{selectedEstimate?.requires_receipt ? "Receipt required" : "Receipt optional"}</small></div>
       </> : <>

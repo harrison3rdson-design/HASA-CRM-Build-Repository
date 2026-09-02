@@ -71,9 +71,11 @@ function blankExpenseLine(id: string): ExpenseLineValue {
 export function ProposalLineItemsFields({
   initialLaborLines = EMPTY_LABOR_LINES,
   initialExpenseLines = EMPTY_EXPENSE_LINES,
+  totalLabel = "Estimated Proposal Total",
 }: {
   initialLaborLines?: LaborLineValue[];
   initialExpenseLines?: ExpenseLineValue[];
+  totalLabel?: string;
 }) {
   const headingPrefix = useId();
   const nextId = useRef(1);
@@ -318,7 +320,7 @@ export function ProposalLineItemsFields({
       </section>
 
       <div className="full proposal-estimate-total">
-        <span>Estimated Proposal Total</span>
+        <span>{totalLabel}</span>
         <strong>{currency(laborTotal + expenseTotal)}</strong>
       </div>
     </>

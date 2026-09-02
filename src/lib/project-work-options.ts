@@ -1,13 +1,17 @@
-export type ProposalLaborCategory = {
+export type ApprovedLaborCategory = {
   id: string;
+  source_kind: "proposal" | "additional_service";
+  source_label: string;
   description: string;
   billing_type: string;
   quantity: number | string;
   rate: number | string;
 };
 
-export type ProposalExpenseCategory = {
+export type ApprovedExpenseCategory = {
   id: string;
+  source_kind: "proposal" | "additional_service";
+  source_label: string;
   category: string;
   description: string | null;
   estimated_rate: number | string | null;
@@ -22,6 +26,6 @@ export type ProjectWorkOption = {
   project_number: string;
   project_name: string;
   source_revision_id: string | null;
-  labor_categories: ProposalLaborCategory[];
-  expense_categories: ProposalExpenseCategory[];
+  labor_categories: ApprovedLaborCategory[];
+  expense_categories: ApprovedExpenseCategory[];
 };

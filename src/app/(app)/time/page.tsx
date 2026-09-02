@@ -6,6 +6,16 @@ import { hours, money } from "@/lib/ui/format";
 
 export const dynamic = "force-dynamic";
 
+function sourceLabel(entry: any) {
+  const item = Array.isArray(entry.source_additional_service_labor_item)
+    ? entry.source_additional_service_labor_item[0]
+    : entry.source_additional_service_labor_item;
+  const authorization = Array.isArray(item?.additional_service)
+    ? item.additional_service[0]
+    : item?.additional_service;
+  return authorization?.authorization_number ?? (entry.source_fee_item_id ? "Original Proposal" : "Manual");
+}
+
 export default async function TimePage({
   searchParams,
 }: {
@@ -27,7 +37,7 @@ export default async function TimePage({
       </Panel>
     </div>
     <Panel title="Recent Time">
-      <div className="table-wrap"><table><thead><tr><th>Date</th><th>Project</th><th>Activity</th><th>Description</th><th>Hours</th><th>Value</th></tr></thead><tbody>{rows.map((x:any)=><tr key={x.id}><td>{x.work_date}</td><td>{x.project?.project_number??"—"}</td><td>{x.is_travel_time?"Travel Time":x.activity_type}</td><td>{x.description??"—"}</td><td>{hours(x.hours)}</td><td>{money(Number(x.hours)*Number(x.billing_rate))}</td></tr>)}</tbody></table></div>
+      <div className="table-wrap"><table><thead><tr><th>Date</th><th>Project</th><th>Approved Source</th><th>Activity</th><th>Description</th><th>Hours</th><th>Value</th></tr></thead><tbody>{rows.map((x:any)=><tr key={x.id}><td>{x.work_date}</td><td>{x.project?.project_number??"—"}</td><td>{sourceLabel(x)}</td><td>{x.is_travel_time?"Travel Time":x.activity_type}</td><td>{x.description??"—"}</td><td>{hours(x.hours)}</td><td>{money(Number(x.hours)*Number(x.billing_rate))}</td></tr>)}</tbody></table></div>
     </Panel>
   </>;
 }

@@ -23,8 +23,9 @@ export default async function InvoiceDetailPage({
       <InvoiceSummary invoice={d.invoice} />
 
       <Panel title="Line Items">
-        <div className="table-wrap"><table><thead><tr><th>Description</th><th>Type</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
+        {d.items.length ? <div className="table-wrap"><table><thead><tr><th>Description</th><th>Type</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
         <tbody>{d.items.map((i:any)=><tr key={i.id}><td>{i.description}</td><td>{i.item_type}</td><td>{i.quantity}</td><td>{money(i.rate)}</td><td>{money(i.amount)}</td></tr>)}</tbody></table></div>
+        : <p className="muted">No unbilled time or expenses were available. This draft has no line items yet.</p>}
       </Panel>
 
       <div className="two-column">

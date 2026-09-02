@@ -68,6 +68,17 @@ export async function createInvoiceAction(formData: FormData) {
     .single();
 
   if (error) throw error;
+
+  if (boolValue(formData.get("include_unbilled_work"))) {
+    const { error: buildError } = await admin.rpc("build_invoice_from_unbilled", {
+      p_invoice_id: data.id,
+    });
+    if (buildError) {
+      await admin.from("invoices").delete().eq("id", data.id).eq("status", "draft");
+      throw buildError;
+    }
+  }
+
   revalidatePath("/billing");
   revalidatePath(`/projects/${projectId}`);
   redirect(`/billing/${data.id}`);

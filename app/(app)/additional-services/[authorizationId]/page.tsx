@@ -83,6 +83,13 @@ export default async function AdditionalServiceDetailPage({
         ) : (
           <Panel title="Issued Authorization">
             <p className="preline">{a.description}</p>
+            {a.labor_items?.length ? <div className="table-wrap"><table><thead><tr><th>Labor Category</th><th>Hours</th><th>Rate</th><th>Amount</th></tr></thead><tbody>
+              {a.labor_items.map((item:any) => <tr key={item.id}><td>{item.description}</td><td>{item.hours}</td><td>{money(item.rate)}</td><td>{money(item.amount)}</td></tr>)}
+            </tbody></table></div> : null}
+            {a.expense_items?.length ? <div className="table-wrap"><table><thead><tr><th>Expense Category</th><th>Description</th><th>Estimate</th></tr></thead><tbody>
+              {a.expense_items.map((item:any) => <tr key={item.id}><td>{item.category}</td><td>{item.description ?? "—"}</td><td>{money(item.estimated_amount)}</td></tr>)}
+            </tbody></table></div> : null}
+            {!a.labor_items?.length && !a.expense_items?.length ? <p className="footnote">This legacy authorization was issued before itemized work categories were introduced.</p> : null}
           </Panel>
         )}
       </section>

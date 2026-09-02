@@ -23,15 +23,19 @@ export function ManualTimeForm({
 }) {
   const selectedProject = projects.find((project) => project.id === selectedProjectId);
   const [projectId, setProjectId] = useState(selectedProjectId ?? "");
-  const [sourceFeeItemId, setSourceFeeItemId] = useState(selectedProject?.labor_categories[0]?.id ?? "");
+  const [sourceKey, setSourceKey] = useState(() => {
+    const category = selectedProject?.labor_categories[0];
+    return category ? `${category.source_kind}:${category.id}` : "";
+  });
   const activeProject = projects.find((project) => project.id === projectId);
-  const selectedFeeItem = activeProject?.labor_categories.find((item) => item.id === sourceFeeItemId);
-  const hasProposalCategories = Boolean(activeProject?.labor_categories.length);
+  const selectedFeeItem = activeProject?.labor_categories.find((item) => `${item.source_kind}:${item.id}` === sourceKey);
+  const hasApprovedCategories = Boolean(activeProject?.labor_categories.length);
 
   function selectProject(nextProjectId: string) {
     const project = projects.find((item) => item.id === nextProjectId);
     setProjectId(nextProjectId);
-    setSourceFeeItemId(project?.labor_categories[0]?.id ?? "");
+    const category = project?.labor_categories[0];
+    setSourceKey(category ? `${category.source_kind}:${category.id}` : "");
   }
 
   return (
@@ -47,12 +51,12 @@ export function ManualTimeForm({
         </label>}
       {returnTo ? <input type="hidden" name="return_to" value={returnTo} /> : null}
       <label>Date<input name="work_date" type="date" defaultValue={workDate} required /></label>
-      {hasProposalCategories ? <>
-        <label>Proposal Labor Category
-          <select name="source_fee_item_id" value={sourceFeeItemId} required onChange={(event) => setSourceFeeItemId(event.target.value)}>
-            {activeProject?.labor_categories.map((item) => <option key={item.id} value={item.id}>{item.description}</option>)}
+      {hasApprovedCategories ? <>
+        <label>Approved Labor Category
+          <select name="approved_labor_source" value={sourceKey} required onChange={(event) => setSourceKey(event.target.value)}>
+            {activeProject?.labor_categories.map((item) => <option key={`${item.source_kind}:${item.id}`} value={`${item.source_kind}:${item.id}`}>{item.source_label} — {item.description}</option>)}
           </select>
-          <span>From the accepted proposal.</span>
+          <span>From the accepted proposal or an accepted Additional Service.</span>
         </label>
         <div className="project-context"><span>Billing Rate</span><strong>{selectedFeeItem ? `${money(selectedFeeItem.rate)} / hour` : "—"}</strong><small>Inherited and preserved with this time entry</small></div>
       </> : <>
@@ -60,7 +64,7 @@ export function ManualTimeForm({
           <select name="activity_type" required defaultValue="Consulting">
             {FALLBACK_ACTIVITIES.map((activity) => <option key={activity}>{activity}</option>)}
           </select>
-          <span>No accepted proposal labor categories are available for this project.</span>
+          <span>No approved labor categories are available for this project.</span>
         </label>
         <label>Billing Rate<input name="billing_rate" type="number" min="0" step="0.01" /></label>
       </>}

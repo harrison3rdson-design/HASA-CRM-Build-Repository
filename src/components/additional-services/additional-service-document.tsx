@@ -7,6 +7,22 @@ type AdditionalServiceDocumentProps = {
     description: string;
     billing_type: string;
     authorized_amount: number | string;
+    labor_items?: Array<{
+      id: string;
+      description: string;
+      hours: number | string;
+      rate: number | string;
+      amount: number | string;
+    }>;
+    expense_items?: Array<{
+      id: string;
+      category: string;
+      description: string | null;
+      estimated_quantity: number | string;
+      unit: string | null;
+      estimated_rate: number | string;
+      estimated_amount: number | string;
+    }>;
     project?: {
       project_number?: string | null;
       project_name?: string | null;
@@ -47,6 +63,24 @@ export function AdditionalServiceDocument({ authorization, company }: Additional
           <h2>Requested Additional Service</h2>
           <p className="preline">{authorization.description}</p>
         </section>
+
+        {authorization.labor_items?.length ? (
+          <section>
+            <h2>Services and Labor</h2>
+            <div className="table-wrap"><table><thead><tr><th>Description</th><th>Hours</th><th>Rate</th><th>Amount</th></tr></thead>
+              <tbody>{authorization.labor_items.map((item) => <tr key={item.id}><td>{item.description}</td><td>{item.hours}</td><td>{money(item.rate)}</td><td>{money(item.amount)}</td></tr>)}</tbody>
+            </table></div>
+          </section>
+        ) : null}
+
+        {authorization.expense_items?.length ? (
+          <section>
+            <h2>Estimated Expenses</h2>
+            <div className="table-wrap"><table><thead><tr><th>Category</th><th>Description</th><th>Quantity</th><th>Unit Cost</th><th>Estimate</th></tr></thead>
+              <tbody>{authorization.expense_items.map((item) => <tr key={item.id}><td>{item.category}</td><td>{item.description ?? "—"}</td><td>{item.estimated_quantity} {item.unit ?? ""}</td><td>{money(item.estimated_rate)}</td><td>{money(item.estimated_amount)}</td></tr>)}</tbody>
+            </table></div>
+          </section>
+        ) : null}
 
         <div className="public-totals">
           <div><span>Billing Type</span><strong>{billingTypeLabel(authorization.billing_type)}</strong></div>

@@ -24,7 +24,9 @@ export async function getPublicAuthorizationByToken(token: string) {
         project_number,project_name,project_location,
         client:clients(company_name),
         primary_contact:contacts(first_name,last_name,title)
-      )
+      ),
+      labor_items:additional_service_labor_items(*),
+      expense_items:additional_service_expense_items(*)
     `).eq("id", link.additional_service_id).single(),
     admin.from("company_settings").select("*").limit(1).single(),
   ]);

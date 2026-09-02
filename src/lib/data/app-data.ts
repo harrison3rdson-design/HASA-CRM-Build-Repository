@@ -32,8 +32,8 @@ async function q(table:string, select:string, order?:string){
 export const getClients=()=>q("clients","id,client_number,company_name,email,phone,active","company_name");
 export const getProposals=()=>q("proposals","id,proposal_number,project_name,status,current_revision,client:clients(company_name)","created_at");
 export const getProjects=()=>q("project_financial_summary","*","project_number");
-export const getTimeEntries=()=>q("time_entries","id,work_date,activity_type,description,hours,billable,billing_rate,is_travel_time,project:projects(project_number,project_name)","work_date");
-export const getExpenses=()=>q("expenses","id,expense_date,category,vendor,actual_cost,billable_amount,billing_rule,project:projects(project_number,project_name)","expense_date");
+export const getTimeEntries=()=>q("time_entries","id,work_date,activity_type,description,hours,billable,billing_rate,is_travel_time,source_fee_item_id,source_additional_service_labor_item:additional_service_labor_items(additional_service:additional_services(authorization_number)),project:projects(project_number,project_name)","work_date");
+export const getExpenses=()=>q("expenses","id,expense_date,category,vendor,actual_cost,billable_amount,billing_rule,source_estimate_id,source_additional_service_expense_item:additional_service_expense_items(additional_service:additional_services(authorization_number)),project:projects(project_number,project_name)","expense_date");
 export const getReceiptInbox=()=>q("receipt_inbox","id,original_filename,mime_type,captured_at,status,project_id,expense_id","captured_at");
 export const getInvoices=()=>q("invoices","id,invoice_number,invoice_date,due_date,status,total,amount_paid,balance_due,invoice_type,client:clients(company_name),project:projects(project_number,project_name)","invoice_date");
 export const getDocuments=()=>q("documents","id,title,document_type,document_subtype,document_date,locked,storage_path","created_at");
@@ -64,30 +64,96 @@ export async function getProjectWorkOptions(): Promise<ProjectWorkOption[]> {
       .filter((id): id is string => Boolean(id)),
   )];
 
-  const [laborResult, expenseResult] = revisionIds.length
-    ? await Promise.all([
+  const projectIds = (projects ?? []).map((project) => project.id);
+  const [laborResult, expenseResult, authorizationResult] = await Promise.all([
+    revisionIds.length
+      ?
         s.from("proposal_fee_items")
           .select("id,proposal_revision_id,description,billing_type,quantity,rate")
           .in("proposal_revision_id", revisionIds)
-          .order("sort_order"),
+          .order("sort_order")
+      : Promise.resolve({ data: [], error: null }),
+    revisionIds.length
+      ?
         s.from("proposal_expense_estimates")
           .select("id,proposal_revision_id,category,description,estimated_rate,estimated_amount,billing_rule,markup_percent,requires_receipt")
           .in("proposal_revision_id", revisionIds)
+          .order("sort_order")
+      : Promise.resolve({ data: [], error: null }),
+    projectIds.length
+      ? s.from("additional_services")
+          .select("id,project_id,authorization_number")
+          .in("project_id", projectIds)
+          .eq("status", "accepted")
+          .order("authorization_number")
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (laborResult.error) throw laborResult.error;
+  if (expenseResult.error) throw expenseResult.error;
+  if (authorizationResult.error) throw authorizationResult.error;
+
+  const authorizationIds = (authorizationResult.data ?? []).map((authorization) => authorization.id);
+  const [additionalLaborResult, additionalExpenseResult] = authorizationIds.length
+    ? await Promise.all([
+        s.from("additional_service_labor_items")
+          .select("id,additional_service_id,description,hours,rate")
+          .in("additional_service_id", authorizationIds)
+          .order("sort_order"),
+        s.from("additional_service_expense_items")
+          .select("id,additional_service_id,category,description,estimated_rate,estimated_amount,billing_rule,markup_percent,requires_receipt")
+          .in("additional_service_id", authorizationIds)
           .order("sort_order"),
       ])
     : [{ data: [], error: null }, { data: [], error: null }];
 
-  if (laborResult.error) throw laborResult.error;
-  if (expenseResult.error) throw expenseResult.error;
+  if (additionalLaborResult.error) throw additionalLaborResult.error;
+  if (additionalExpenseResult.error) throw additionalExpenseResult.error;
 
   return (projects ?? []).map((project) => ({
     ...project,
-    labor_categories: (laborResult.data ?? [])
-      .filter((item) => item.proposal_revision_id === project.source_revision_id)
-      .map(({ proposal_revision_id: _revisionId, ...item }) => item),
-    expense_categories: (expenseResult.data ?? [])
-      .filter((item) => item.proposal_revision_id === project.source_revision_id)
-      .map(({ proposal_revision_id: _revisionId, ...item }) => item),
+    labor_categories: [
+      ...(laborResult.data ?? [])
+        .filter((item) => item.proposal_revision_id === project.source_revision_id)
+        .map(({ proposal_revision_id: _revisionId, ...item }) => ({
+          ...item,
+          source_kind: "proposal" as const,
+          source_label: "Original Proposal",
+        })),
+      ...(authorizationResult.data ?? []).flatMap((authorization) =>
+        authorization.project_id === project.id
+          ? (additionalLaborResult.data ?? [])
+              .filter((item) => item.additional_service_id === authorization.id)
+              .map(({ additional_service_id: _authorizationId, hours: quantity, ...item }) => ({
+                ...item,
+                quantity,
+                billing_type: "hourly",
+                source_kind: "additional_service" as const,
+                source_label: authorization.authorization_number,
+              }))
+          : [],
+      ),
+    ],
+    expense_categories: [
+      ...(expenseResult.data ?? [])
+        .filter((item) => item.proposal_revision_id === project.source_revision_id)
+        .map(({ proposal_revision_id: _revisionId, ...item }) => ({
+          ...item,
+          source_kind: "proposal" as const,
+          source_label: "Original Proposal",
+        })),
+      ...(authorizationResult.data ?? []).flatMap((authorization) =>
+        authorization.project_id === project.id
+          ? (additionalExpenseResult.data ?? [])
+              .filter((item) => item.additional_service_id === authorization.id)
+              .map(({ additional_service_id: _authorizationId, ...item }) => ({
+                ...item,
+                source_kind: "additional_service" as const,
+                source_label: authorization.authorization_number,
+              }))
+          : [],
+      ),
+    ],
   }));
 }
 

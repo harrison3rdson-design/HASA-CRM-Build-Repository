@@ -65,6 +65,11 @@ export function InvoiceForm({
         <span>Defaults from the accepted proposal revision for the selected project.</span>
       </label>
       <label className="full">Customer Notes<textarea name="customer_notes" rows={3} /></label>
+      <label className="check full">
+        <input name="include_unbilled_work" type="checkbox" defaultChecked />
+        Build from Unbilled Time and Expenses
+        <span>Creates grouped invoice lines and reserves each source entry so it cannot be billed twice.</span>
+      </label>
       <label className="check"><input name="include_expense_detail" type="checkbox" /> Include Expense Detail</label>
       <label className="check"><input name="include_receipt_appendix" type="checkbox" /> Include Receipt Appendix</label>
       <div className="full"><button className="primary-button" type="submit">Create Draft Invoice</button></div>

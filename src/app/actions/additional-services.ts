@@ -4,33 +4,25 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase-admin";
-import { requiredText, numberValue } from "@/lib/validation/common";
+import { requiredText } from "@/lib/validation/common";
+import { parseAdditionalServiceItems } from "@/lib/additional-service-items";
 
 export async function createAdditionalServiceAction(formData: FormData) {
   await requireUser();
   const admin = createAdminClient();
 
   const projectId = requiredText(formData.get("project_id"), "Project");
-  const { data: authNumber, error: numberError } = await admin.rpc(
-    "next_additional_service_number",
-    { p_project_id: projectId }
-  );
-  if (numberError) throw numberError;
-
-  const { data, error } = await admin
-    .from("additional_services")
-    .insert({
-      authorization_number: authNumber,
-      project_id: projectId,
-      description: requiredText(formData.get("description"), "Description"),
-      billing_type: requiredText(formData.get("billing_type"), "Billing type"),
-      authorized_amount: numberValue(formData.get("authorized_amount"), "Authorized amount", { min: 0 }),
-      status: "draft",
-    })
-    .select("id")
-    .single();
+  const { laborItems, expenseItems } = parseAdditionalServiceItems(formData);
+  const { data: createdId, error } = await admin.rpc("create_additional_service_draft", {
+    p_project_id: projectId,
+    p_description: requiredText(formData.get("description"), "Description"),
+    p_billing_type: requiredText(formData.get("billing_type"), "Authorization type"),
+    p_labor_items: laborItems,
+    p_expense_items: expenseItems,
+  });
 
   if (error) throw error;
+  const data = { id: createdId };
   revalidatePath("/projects");
   revalidatePath(`/projects/${projectId}`);
   redirect(`/additional-services/${data.id}`);
@@ -41,6 +33,7 @@ export async function updateAdditionalServiceAction(formData: FormData) {
   const admin = createAdminClient();
 
   const additionalServiceId = requiredText(formData.get("additional_service_id"), "Additional service");
+  const { laborItems, expenseItems } = parseAdditionalServiceItems(formData);
   const { data: existing, error: existingError } = await admin
     .from("additional_services")
     .select("project_id,status,locked")
@@ -52,18 +45,13 @@ export async function updateAdditionalServiceAction(formData: FormData) {
     throw new Error("Only an unlocked draft authorization can be edited.");
   }
 
-  const { data: updated, error } = await admin
-    .from("additional_services")
-    .update({
-      description: requiredText(formData.get("description"), "Description"),
-      billing_type: requiredText(formData.get("billing_type"), "Billing type"),
-      authorized_amount: numberValue(formData.get("authorized_amount"), "Authorized amount", { min: 0 }),
-    })
-    .eq("id", additionalServiceId)
-    .eq("status", "draft")
-    .eq("locked", false)
-    .select("id")
-    .maybeSingle();
+  const { data: updated, error } = await admin.rpc("update_additional_service_draft", {
+    p_additional_service_id: additionalServiceId,
+    p_description: requiredText(formData.get("description"), "Description"),
+    p_billing_type: requiredText(formData.get("billing_type"), "Authorization type"),
+    p_labor_items: laborItems,
+    p_expense_items: expenseItems,
+  });
 
   if (error) throw error;
   if (!updated) throw new Error("This authorization is no longer editable.");

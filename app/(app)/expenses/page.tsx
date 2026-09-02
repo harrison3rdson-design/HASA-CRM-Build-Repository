@@ -6,6 +6,16 @@ import { money } from "@/lib/ui/format";
 
 export const dynamic = "force-dynamic";
 
+function sourceLabel(expense: any) {
+  const item = Array.isArray(expense.source_additional_service_expense_item)
+    ? expense.source_additional_service_expense_item[0]
+    : expense.source_additional_service_expense_item;
+  const authorization = Array.isArray(item?.additional_service)
+    ? item.additional_service[0]
+    : item?.additional_service;
+  return authorization?.authorization_number ?? (expense.source_estimate_id ? "Original Proposal" : "Manual");
+}
+
 export default async function ExpensesPage({
   searchParams,
 }: {
@@ -27,7 +37,7 @@ export default async function ExpensesPage({
       </Panel>
     </div>
     <Panel title="Recent Expenses">
-      <div className="table-wrap"><table><thead><tr><th>Date</th><th>Project</th><th>Category</th><th>Vendor</th><th>Actual</th><th>Billable</th><th>Rule</th></tr></thead><tbody>{rows.map((x:any)=><tr key={x.id}><td>{x.expense_date}</td><td>{x.project?.project_number??"—"}</td><td>{x.category}</td><td>{x.vendor??"—"}</td><td>{money(x.actual_cost)}</td><td>{money(x.billable_amount)}</td><td><span className="pill">{x.billing_rule}</span></td></tr>)}</tbody></table></div>
+      <div className="table-wrap"><table><thead><tr><th>Date</th><th>Project</th><th>Approved Source</th><th>Category</th><th>Vendor</th><th>Actual</th><th>Billable</th><th>Rule</th></tr></thead><tbody>{rows.map((x:any)=><tr key={x.id}><td>{x.expense_date}</td><td>{x.project?.project_number??"—"}</td><td>{sourceLabel(x)}</td><td>{x.category}</td><td>{x.vendor??"—"}</td><td>{money(x.actual_cost)}</td><td>{money(x.billable_amount)}</td><td><span className="pill">{x.billing_rule}</span></td></tr>)}</tbody></table></div>
     </Panel>
   </>;
 }

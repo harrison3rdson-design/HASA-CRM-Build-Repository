@@ -37,6 +37,17 @@ export const getReceiptInbox=()=>q("receipt_inbox","id,original_filename,mime_ty
 export const getInvoices=()=>q("invoices","id,invoice_number,invoice_date,due_date,status,total,amount_paid,balance_due,invoice_type,client:clients(company_name),project:projects(project_number,project_name)","invoice_date");
 export const getDocuments=()=>q("documents","id,title,document_type,document_subtype,document_date,locked,storage_path","created_at");
 
+export async function getProjectOptions() {
+  const s = createAdminClient();
+  const { data, error } = await s
+    .from("projects")
+    .select("id,project_number,project_name")
+    .eq("status", "active")
+    .order("project_number");
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function getCompanySettings(){
   const s=createAdminClient();
   const {data,error}=await s.from("company_settings").select("*").limit(1).single();

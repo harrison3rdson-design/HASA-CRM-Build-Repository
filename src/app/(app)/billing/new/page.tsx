@@ -4,7 +4,12 @@ import { getInvoiceFormData } from "@/lib/data/app-data";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewInvoicePage() {
+export default async function NewInvoicePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ projectId?: string }>;
+}) {
+  const { projectId } = await searchParams;
   const { projects, defaultPaymentTerms } = await getInvoiceFormData();
   const invoiceDate = new Date().toISOString().slice(0, 10);
 
@@ -14,7 +19,7 @@ export default async function NewInvoicePage() {
         <div><h1>New Invoice</h1><p>Terms default from the project’s accepted proposal revision.</p></div>
       </div>
       <Panel title="Invoice Details">
-        <InvoiceForm projects={projects} defaultPaymentTerms={defaultPaymentTerms} invoiceDate={invoiceDate} />
+        <InvoiceForm key={projectId ?? "unscoped"} projects={projects} defaultPaymentTerms={defaultPaymentTerms} invoiceDate={invoiceDate} selectedProjectId={projectId} />
       </Panel>
     </>
   );

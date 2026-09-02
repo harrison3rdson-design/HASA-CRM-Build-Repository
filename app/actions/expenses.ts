@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { requiredText, optionalText, numberValue, boolValue } from "@/lib/validation/common";
@@ -9,6 +10,7 @@ import { receiptStoragePath } from "@/lib/storage/private-storage";
 
 export async function createExpenseAction(formData: FormData) {
   const { supabase, authUser } = await requireUser();
+  const projectId = requiredText(formData.get("project_id"), "Project");
 
   const { data: user } = await supabase
     .from("app_users")
@@ -29,7 +31,7 @@ export async function createExpenseAction(formData: FormData) {
   const { data, error } = await supabase
     .from("expenses")
     .insert({
-      project_id: requiredText(formData.get("project_id"), "Project"),
+      project_id: projectId,
       source_estimate_id: optionalText(formData.get("source_estimate_id")),
       expense_date: requiredText(formData.get("expense_date"), "Expense date"),
       category: requiredText(formData.get("category"), "Category"),
@@ -47,7 +49,10 @@ export async function createExpenseAction(formData: FormData) {
 
   if (error) throw error;
   revalidatePath("/expenses");
-  return data;
+  revalidatePath(`/projects/${projectId}`);
+  const returnTo = optionalText(formData.get("return_to"));
+  if (returnTo === `/projects/${projectId}`) redirect(returnTo);
+  void data;
 }
 
 export async function uploadReceiptForExpenseAction(formData: FormData) {

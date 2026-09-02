@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { requiredText, optionalText, numberValue, boolValue } from "@/lib/validation/common";
@@ -67,7 +68,8 @@ export async function createInvoiceAction(formData: FormData) {
 
   if (error) throw error;
   revalidatePath("/billing");
-  void data;
+  revalidatePath(`/projects/${projectId}`);
+  redirect(`/billing/${data.id}`);
 }
 
 export async function addInvoiceItemAction(formData: FormData) {

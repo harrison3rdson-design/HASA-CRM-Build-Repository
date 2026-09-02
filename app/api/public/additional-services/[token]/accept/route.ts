@@ -71,7 +71,13 @@ export async function POST(
       });
     }
 
-    return NextResponse.json({ accepted: true, projectId });
+    return NextResponse.json({
+      accepted: true,
+      projectId,
+      acceptedAt: new Date().toISOString(),
+      signerName: String(signer.signerName).trim(),
+      reference: `Authorization ${a.authorization_number}`,
+    });
   } catch (error) {
     console.error("[additional-service-acceptance] failed", {
       message: error instanceof Error ? error.message : String(error),

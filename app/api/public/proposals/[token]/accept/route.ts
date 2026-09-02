@@ -70,7 +70,13 @@ export async function POST(
       });
     }
 
-    return NextResponse.json({ accepted: true, projectId });
+    return NextResponse.json({
+      accepted: true,
+      projectId,
+      acceptedAt: new Date().toISOString(),
+      signerName: String(signer.signerName).trim(),
+      reference: `Proposal ${data.proposal.proposal_number}`,
+    });
   } catch (error) {
     console.error("[proposal-acceptance] failed", {
       message: error instanceof Error ? error.message : String(error),

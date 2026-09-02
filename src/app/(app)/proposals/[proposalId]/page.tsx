@@ -18,7 +18,7 @@ import {
 import type { ExpenseBillingRule } from "@/lib/proposal-items";
 import { parseProposalSectionType } from "@/lib/proposal-sections";
 import { proposalRevisionLabel } from "@/lib/proposal-revisions";
-import { money } from "@/lib/ui/format";
+import { dateTime, money } from "@/lib/ui/format";
 import { isTwilioConfigured } from "@/lib/messaging/twilio";
 import { isTransactionalEmailConfigured } from "@/lib/messaging/email";
 
@@ -49,6 +49,16 @@ type ExpenseRecord = {
   billing_rule: ExpenseBillingRule;
   markup_percent: number | string | null;
   requires_receipt: boolean;
+};
+
+type AcceptanceRecord = {
+  id: string;
+  proposal_revision_id: string;
+  signer_name: string;
+  signer_title: string | null;
+  signer_email: string | null;
+  signer_mobile: string | null;
+  accepted_at: string;
 };
 
 export default async function ProposalDetailPage({
@@ -103,6 +113,10 @@ export default async function ProposalDetailPage({
       markupPercent: String(expense.markup_percent ?? "0"),
       requiresReceipt: Boolean(expense.requires_receipt),
     })) : [];
+  const acceptances = d.acceptances as AcceptanceRecord[];
+  const acceptanceByRevision = new Map(
+    acceptances.map((acceptance) => [acceptance.proposal_revision_id, acceptance]),
+  );
 
   return (
     <>
@@ -221,9 +235,17 @@ export default async function ProposalDetailPage({
         {latest ? <ProposalSummary revision={latest} /> : null}
 
         <Panel title="Proposal Version History">
-          <div className="table-wrap"><table><thead><tr><th>Version</th><th>Date</th><th>Fee</th><th>Expenses</th><th>Total</th><th>Terms</th><th>Locked</th></tr></thead>
-          <tbody>{d.revisions.map((r:any)=><tr key={r.id}><td>{proposalRevisionLabel(r.revision_number)}</td><td>{r.revision_date}</td><td>{money(r.professional_fee)}</td><td>{money(r.estimated_expenses)}</td><td>{money(r.estimated_total)}</td><td>{r.payment_terms}</td><td>{r.locked?"Yes":"No"}</td></tr>)}</tbody></table></div>
+          <div className="table-wrap"><table><thead><tr><th>Version</th><th>Date</th><th>Fee</th><th>Expenses</th><th>Total</th><th>Terms</th><th>Locked</th><th>Approved By</th><th>Approval Date</th></tr></thead>
+          <tbody>{d.revisions.map((r:any)=>{const acceptance=acceptanceByRevision.get(r.id);return <tr key={r.id}><td>{proposalRevisionLabel(r.revision_number)}</td><td>{r.revision_date}</td><td>{money(r.professional_fee)}</td><td>{money(r.estimated_expenses)}</td><td>{money(r.estimated_total)}</td><td>{r.payment_terms}</td><td>{r.locked?"Yes":"No"}</td><td>{acceptance?.signer_name??"—"}</td><td>{dateTime(acceptance?.accepted_at)}</td></tr>})}</tbody></table></div>
         </Panel>
+
+        {acceptances.length ? (
+          <Panel title="Customer Approval Records">
+            <p className="footnote">These records identify who electronically approved each proposal version and when the approval was completed.</p>
+            <div className="table-wrap"><table><thead><tr><th>Version</th><th>Approved</th><th>Name</th><th>Title</th><th>Email</th><th>Mobile</th></tr></thead>
+            <tbody>{acceptances.map((acceptance)=>{const revision=d.revisions.find((item:any)=>item.id===acceptance.proposal_revision_id);return <tr key={acceptance.id}><td>{revision?proposalRevisionLabel(revision.revision_number):"Proposal"}</td><td>{dateTime(acceptance.accepted_at)}</td><td>{acceptance.signer_name}</td><td>{acceptance.signer_title??"—"}</td><td>{acceptance.signer_email??"—"}</td><td>{acceptance.signer_mobile??"—"}</td></tr>})}</tbody></table></div>
+          </Panel>
+        ) : null}
 
         {latest ? <>
           <Panel title="Scope">

@@ -1,15 +1,33 @@
 import { createExpenseAction } from "@/app/actions/expenses";
 
-export function ExpenseForm({ projects }: { projects: Array<{ id: string; project_number: string; project_name: string }> }) {
+type ProjectOption = { id: string; project_number: string; project_name: string };
+
+export function ExpenseForm({
+  projects,
+  selectedProjectId,
+  expenseDate,
+  returnTo,
+}: {
+  projects: ProjectOption[];
+  selectedProjectId?: string;
+  expenseDate?: string;
+  returnTo?: string;
+}) {
+  const selectedProject = projects.find((project) => project.id === selectedProjectId);
+
   return (
     <form action={createExpenseAction} className="form-grid">
-      <label>Project
-        <select name="project_id" required>
-          <option value="">Select project</option>
-          {projects.map(p => <option key={p.id} value={p.id}>{p.project_number} — {p.project_name}</option>)}
-        </select>
-      </label>
-      <label>Date<input name="expense_date" type="date" required /></label>
+      {selectedProject ? <>
+        <input type="hidden" name="project_id" value={selectedProject.id} />
+        <div className="project-context"><span>Project</span><strong>{selectedProject.project_number} — {selectedProject.project_name}</strong><small>Inherited from the project record</small></div>
+      </> : <label>Project
+          <select name="project_id" defaultValue={selectedProjectId ?? ""} required>
+            <option value="">Select project</option>
+            {projects.map(p => <option key={p.id} value={p.id}>{p.project_number} — {p.project_name}</option>)}
+          </select>
+        </label>}
+      {returnTo ? <input type="hidden" name="return_to" value={returnTo} /> : null}
+      <label>Date<input name="expense_date" type="date" defaultValue={expenseDate} required /></label>
       <label>Category<input name="category" required /></label>
       <label>Vendor<input name="vendor" /></label>
       <label>Actual Cost<input name="actual_cost" type="number" min="0" step="0.01" required /></label>

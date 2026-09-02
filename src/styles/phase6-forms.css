@@ -7,6 +7,9 @@
 .form-grid .check input{width:auto}
 .form-grid label>span{font-size:11px;line-height:1.4;color:var(--muted)}
 .form-grid button:disabled{cursor:not-allowed;opacity:.6}
+.project-context{display:grid;gap:4px;padding:11px 12px;border:1px solid #b9c7d4;border-radius:8px;background:#f4f8fb}
+.project-context span{color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.project-context strong{font-size:13px}.project-context small{color:var(--muted);font-size:11px}
 .inherited-selection-note{display:grid;gap:4px;padding:12px 14px;border:1px solid #a9c6df;border-radius:10px;background:#f2f8fd;color:#254b69}
 .inherited-selection-note strong{font-size:13px}.inherited-selection-note span{font-size:11px;line-height:1.45;color:#526b7f}
 .form-error{font-size:12px;color:#7f1d1d;margin:8px 0 0}

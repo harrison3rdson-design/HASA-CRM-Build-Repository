@@ -42,7 +42,7 @@ export async function getProposalDetail(proposalId: string) {
     revisionIds.length ? s.from("proposal_sections").select("*").in("proposal_revision_id", revisionIds).order("sort_order") : Promise.resolve({ data: [] } as any),
     revisionIds.length ? s.from("proposal_fee_items").select("*").in("proposal_revision_id", revisionIds).order("sort_order") : Promise.resolve({ data: [] } as any),
     revisionIds.length ? s.from("proposal_expense_estimates").select("*").in("proposal_revision_id", revisionIds).order("sort_order") : Promise.resolve({ data: [] } as any),
-    revisionIds.length ? s.from("proposal_acceptances").select("*").in("proposal_revision_id", revisionIds) : Promise.resolve({ data: [] } as any),
+    revisionIds.length ? s.from("proposal_acceptances").select("*").in("proposal_revision_id", revisionIds).order("accepted_at", { ascending: false }) : Promise.resolve({ data: [] } as any),
   ]);
 
   return {
@@ -64,14 +64,27 @@ export async function getProjectDetail(projectId: string) {
       s.from("project_phases").select("*").eq("project_id", projectId).order("sort_order"),
       s.from("time_entries").select("*").eq("project_id", projectId).order("work_date", { ascending: false }).limit(50),
       s.from("expenses").select("*").eq("project_id", projectId).order("expense_date", { ascending: false }).limit(50),
-      s.from("additional_services").select("*").eq("project_id", projectId).order("created_at", { ascending: false }),
+      s.from("additional_services").select("*, acceptances:additional_service_acceptances(*)").eq("project_id", projectId).order("created_at", { ascending: false }),
       s.from("invoices").select("*").eq("project_id", projectId).order("invoice_date", { ascending: false }),
       s.from("project_financial_summary").select("*").eq("project_id", projectId).single(),
     ]);
 
   if (error) throw error;
+  let sourceAcceptance = null;
+  if (project.source_revision_id) {
+    const { data, error: acceptanceError } = await s
+      .from("proposal_acceptances")
+      .select("signer_name,signer_title,signer_email,signer_mobile,accepted_at")
+      .eq("proposal_revision_id", project.source_revision_id)
+      .order("accepted_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (acceptanceError) throw acceptanceError;
+    sourceAcceptance = data;
+  }
   return {
     project,
+    sourceAcceptance,
     phases: phases ?? [],
     time: time ?? [],
     expenses: expenses ?? [],

@@ -15,18 +15,27 @@ export function InvoiceForm({
   projects,
   defaultPaymentTerms,
   invoiceDate,
+  selectedProjectId,
 }: {
   projects: ProjectOption[];
   defaultPaymentTerms: PaymentTerms;
   invoiceDate: string;
+  selectedProjectId?: string;
 }) {
-  const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>(defaultPaymentTerms);
+  const selectedProject = projects.find((project) => project.id === selectedProjectId);
+  const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>(
+    selectedProject?.payment_terms ?? defaultPaymentTerms,
+  );
 
   return (
     <form action={createInvoiceAction} className="form-grid">
-      <label>Project
+      {selectedProject ? <>
+        <input type="hidden" name="project_id" value={selectedProject.id} />
+        <div className="project-context"><span>Project</span><strong>{selectedProject.project_number} — {selectedProject.project_name}</strong><small>Client and payment terms are inherited from this project</small></div>
+      </> : <label>Project
         <select
           name="project_id"
+          defaultValue={selectedProjectId ?? ""}
           required
           onChange={(event) => {
             const project = projects.find((item) => item.id === event.target.value);
@@ -36,7 +45,7 @@ export function InvoiceForm({
           <option value="">Select project</option>
           {projects.map(p => <option key={p.id} value={p.id}>{p.project_number} — {p.project_name}</option>)}
         </select>
-      </label>
+      </label>}
       <label>Invoice Type
         <select name="invoice_type" defaultValue="progress">
           {["advance","progress","milestone","hourly","expense","final","credit"].map(x => <option key={x}>{x}</option>)}

@@ -5,5 +5,8 @@
 .form-grid .full{grid-column:1/-1}
 .form-grid .check{display:flex;align-items:center;gap:8px;color:var(--text)}
 .form-grid .check input{width:auto}
+.project-context{display:grid;gap:4px;padding:11px 12px;border:1px solid #b9c7d4;border-radius:8px;background:#f4f8fb}
+.project-context span{color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.project-context strong{font-size:13px}.project-context small{color:var(--muted);font-size:11px}
 .form-error{font-size:12px;color:#7f1d1d;margin:8px 0 0}
 @media(max-width:760px){.form-grid{grid-template-columns:1fr}.form-grid .full{grid-column:auto}}

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/server";
 import { requiredText, optionalText, numberValue, boolValue } from "@/lib/validation/common";
 
@@ -75,9 +76,10 @@ export async function stopTimerAction(timeEntryId: string) {
 export async function addManualTimeAction(formData: FormData) {
   const { supabase, authUser } = await requireUser();
   const user = await currentAppUserId(supabase, authUser.id);
+  const projectId = requiredText(formData.get("project_id"), "Project");
 
   const { error } = await supabase.from("time_entries").insert({
-    project_id: requiredText(formData.get("project_id"), "Project"),
+    project_id: projectId,
     phase_id: optionalText(formData.get("phase_id")),
     user_id: user.id,
     work_date: requiredText(formData.get("work_date"), "Work date"),
@@ -92,4 +94,7 @@ export async function addManualTimeAction(formData: FormData) {
 
   if (error) throw error;
   revalidatePath("/time");
+  revalidatePath(`/projects/${projectId}`);
+  const returnTo = optionalText(formData.get("return_to"));
+  if (returnTo === `/projects/${projectId}`) redirect(returnTo);
 }

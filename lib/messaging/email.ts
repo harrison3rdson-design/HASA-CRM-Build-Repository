@@ -3,6 +3,7 @@ export type EmailSendInput = {
   subject: string;
   text: string;
   html?: string;
+  idempotencyKey?: string;
 };
 
 export type EmailDeliveryResult = {
@@ -31,6 +32,9 @@ export class TransactionalEmailProvider {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
+        ...(input.idempotencyKey
+          ? { "Idempotency-Key": input.idempotencyKey }
+          : {}),
       },
       body: JSON.stringify({
         from,

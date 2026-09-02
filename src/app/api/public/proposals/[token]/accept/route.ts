@@ -4,6 +4,7 @@ import { hashPublicToken } from "@/lib/security/tokens";
 import { getPublicProposalByToken } from "@/lib/public/proposal";
 import { executedProposalHtml } from "@/lib/documents/executed-html";
 import { renderHtmlToPdf } from "@/lib/documents/playwright-pdf";
+import { sendInternalAcceptanceNotification } from "@/lib/delivery/customer-action-notification";
 
 export const maxDuration = 60;
 
@@ -49,6 +50,25 @@ export async function POST(
     });
 
     if (error) throw error;
+
+    const notification = await sendInternalAcceptanceNotification({
+      documentType: "proposal",
+      relatedRecordId: data.proposal.id,
+      projectId: projectId ? String(projectId) : null,
+      reference: `Proposal ${data.proposal.proposal_number}`,
+      projectName: data.proposal.project_name,
+      clientName: data.proposal.client?.company_name,
+      signerName: String(signer.signerName).trim(),
+      signerEmail: signer.signerEmail || null,
+      signerMobile: signer.signerMobile || null,
+    });
+
+    if (notification.status === "failed") {
+      console.error("[proposal-acceptance-notification] failed", {
+        proposalId: data.proposal.id,
+        error: notification.errorMessage,
+      });
+    }
 
     return NextResponse.json({ accepted: true, projectId });
   } catch (error) {

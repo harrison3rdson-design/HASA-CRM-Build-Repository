@@ -4,6 +4,7 @@ import { hashPublicToken } from "@/lib/security/tokens";
 import { getPublicAuthorizationByToken } from "@/lib/public/additional-service";
 import { executedAuthorizationHtml } from "@/lib/documents/executed-html";
 import { renderHtmlToPdf } from "@/lib/documents/playwright-pdf";
+import { sendInternalAcceptanceNotification } from "@/lib/delivery/customer-action-notification";
 
 export const maxDuration = 60;
 
@@ -50,6 +51,25 @@ export async function POST(
     });
 
     if (error) throw error;
+
+    const notification = await sendInternalAcceptanceNotification({
+      documentType: "additional_service",
+      relatedRecordId: a.id,
+      projectId: projectId ? String(projectId) : a.project_id,
+      reference: `Authorization ${a.authorization_number}`,
+      projectName: a.project?.project_name,
+      clientName: a.project?.client?.company_name,
+      signerName: String(signer.signerName).trim(),
+      signerEmail: signer.signerEmail || null,
+      signerMobile: signer.signerMobile || null,
+    });
+
+    if (notification.status === "failed") {
+      console.error("[additional-service-acceptance-notification] failed", {
+        authorizationId: a.id,
+        error: notification.errorMessage,
+      });
+    }
 
     return NextResponse.json({ accepted: true, projectId });
   } catch (error) {

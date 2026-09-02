@@ -7,17 +7,20 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "postinstall": "node scripts/prepare-chromium.mjs"
   },
   "dependencies": {
+    "@sparticuz/chromium-min": "149.0.0",
     "@supabase/ssr": "^0.6.0",
     "@supabase/supabase-js": "^2.0.0",
     "next": "^15.0.0",
+    "puppeteer-core": "25.1.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "playwright": "^1.50.0"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@sparticuz/chromium": "149.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "typescript": "^5.7.0",

@@ -6,7 +6,9 @@ export type DeliveryResult = {
   errorMessage?: string;
 };
 
-export function isTwilioConfigured(environment = process.env): boolean {
+export function isTwilioConfigured(
+  environment: Readonly<Record<string, string | undefined>> = process.env
+): boolean {
   return Boolean(
     environment.TWILIO_ACCOUNT_SID
     && environment.TWILIO_AUTH_TOKEN

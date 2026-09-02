@@ -5,6 +5,8 @@ import { getPublicProposalByToken } from "@/lib/public/proposal";
 import { executedProposalHtml } from "@/lib/documents/executed-html";
 import { renderHtmlToPdf } from "@/lib/documents/playwright-pdf";
 
+export const maxDuration = 60;
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ token: string }> }
@@ -49,7 +51,14 @@ export async function POST(
     if (error) throw error;
 
     return NextResponse.json({ accepted: true, projectId });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? "Acceptance failed." }, { status: 400 });
+  } catch (error) {
+    console.error("[proposal-acceptance] failed", {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return NextResponse.json(
+      { error: "The proposal could not be accepted. Please try again or contact HASA Concepts." },
+      { status: 500 }
+    );
   }
 }

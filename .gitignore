@@ -7,3 +7,4 @@ supabase/.temp/
 !.env.example
 
 .vercel
+public/chromium-pack.tar

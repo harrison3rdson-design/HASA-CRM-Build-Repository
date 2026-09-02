@@ -59,7 +59,7 @@ export function AcceptanceCard({ actionUrl, buttonText }: Props) {
       <button className="public-primary" disabled={pending} type="submit">
         {pending ? "Processing…" : buttonText}
       </button>
-      {status ? <p className="public-status">{status}</p> : null}
+      {status ? <p className="public-status" role="status">{status}</p> : null}
     </form>
   );
 }

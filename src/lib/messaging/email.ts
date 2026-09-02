@@ -12,7 +12,9 @@ export type EmailDeliveryResult = {
   errorMessage?: string;
 };
 
-export function isTransactionalEmailConfigured(environment = process.env): boolean {
+export function isTransactionalEmailConfigured(
+  environment: Readonly<Record<string, string | undefined>> = process.env
+): boolean {
   return Boolean(environment.EMAIL_PROVIDER_API_KEY && environment.EMAIL_FROM);
 }
 

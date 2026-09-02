@@ -10,7 +10,7 @@ import { resolveAppUrl } from "@/lib/app-url";
 import { isTwilioConfigured } from "@/lib/messaging/twilio";
 import { isTransactionalEmailConfigured } from "@/lib/messaging/email";
 
-type SendProposalResult =
+type SendDocumentResult =
   | { ok: true; url: string; results: Awaited<ReturnType<typeof deliverPublicLink>> }
   | { ok: false; error: string };
 
@@ -39,7 +39,7 @@ export async function sendProposalAction(input: {
   proposalId: string;
   revisionId: string;
   method: "sms" | "email" | "both";
-}): Promise<SendProposalResult> {
+}): Promise<SendDocumentResult> {
   await requireUser();
   const admin = createAdminClient();
 
@@ -151,31 +151,122 @@ export async function sendProposalAction(input: {
 export async function sendAdditionalServiceAction(input: {
   additionalServiceId: string;
   method: "sms" | "email" | "both";
-}) {
+}): Promise<SendDocumentResult> {
   await requireUser();
   const admin = createAdminClient();
 
   const { data: a, error } = await admin.from("additional_services").select(`
-    authorization_number,project:projects(project_name,primary_contact:contacts(first_name,last_name,email,mobile_phone))
+    authorization_number,project_id,status,locked,
+    project:projects(id,project_name,client_id,primary_contact:contacts(id,first_name,last_name,email,mobile_phone,is_primary))
   `).eq("id", input.additionalServiceId).single();
   if (error) throw error;
+  if (a.locked || a.status !== "draft") {
+    throw new Error("Only an unlocked draft authorization can be sent.");
+  }
+
+  const project = Array.isArray(a.project) ? a.project[0] : a.project;
+  let contact = normalizeRelatedContact(project?.primary_contact);
+  if (!contact && project?.client_id) {
+    const { data: contacts, error: contactsError } = await admin
+      .from("contacts")
+      .select("id,first_name,last_name,email,mobile_phone,is_primary")
+      .eq("client_id", project.client_id)
+      .order("is_primary", { ascending: false })
+      .order("created_at", { ascending: true });
+    if (contactsError) throw contactsError;
+
+    contact = selectDefaultProposalContact(contacts ?? []);
+    if (contact) {
+      const { error: assignError } = await admin
+        .from("projects")
+        .update({ primary_contact_id: contact.id })
+        .eq("id", a.project_id)
+        .is("primary_contact_id", null);
+      if (assignError) throw assignError;
+    }
+  }
+
+  if (!contact?.email && !contact?.mobile_phone) {
+    return { ok: false, error: "Assign a project contact with an email address or mobile number before sending." };
+  }
+  if ((input.method === "email" || input.method === "both") && !contact.email) {
+    return { ok: false, error: "The project contact does not have an email address." };
+  }
+  if ((input.method === "sms" || input.method === "both") && !contact.mobile_phone) {
+    return { ok: false, error: "The project contact does not have a mobile number." };
+  }
+
+  const providerError = requestedProviderError(input.method);
+  if (providerError) {
+    logDeliveryFailure(input.additionalServiceId, input.method, providerError);
+    return { ok: false, error: providerError };
+  }
+
+  let appUrl: string;
+  try {
+    appUrl = resolveAppUrl();
+  } catch (caught) {
+    const message = caught instanceof Error ? caught.message : "The customer link could not be created.";
+    logDeliveryFailure(input.additionalServiceId, input.method, message);
+    return { ok: false, error: message };
+  }
 
   const { token } = await createAdditionalServiceShareLink(input.additionalServiceId);
-  const url = `${resolveAppUrl()}/public/additional-services/${token}`;
-  const c: any = (a as any).project?.primary_contact;
+  const url = `${appUrl}/public/additional-services/${token}`;
 
-  const results = await deliverPublicLink({
-    documentType: "additional_service",
-    relatedRecordId: input.additionalServiceId,
-    url,
-    recipientName: [c?.first_name,c?.last_name].filter(Boolean).join(" "),
-    email: c?.email,
-    mobile: c?.mobile_phone,
-    method: input.method,
-    subject: `HASA Concepts Additional Service ${a.authorization_number}`,
-    message: `Please review additional service authorization ${a.authorization_number}.`,
-  });
+  let results: Awaited<ReturnType<typeof deliverPublicLink>>;
+  try {
+    results = await deliverPublicLink({
+      documentType: "additional_service",
+      relatedRecordId: input.additionalServiceId,
+      url,
+      recipientName: [contact.first_name, contact.last_name].filter(Boolean).join(" "),
+      email: contact.email,
+      mobile: contact.mobile_phone,
+      method: input.method,
+      subject: `HASA Concepts Additional Service ${a.authorization_number}`,
+      message: `Please review additional service authorization ${a.authorization_number} for ${project?.project_name ?? "your project"}.`,
+    });
+  } catch (caught) {
+    await admin.from("additional_service_share_links")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("additional_service_id", input.additionalServiceId)
+      .is("revoked_at", null);
+    const message = caught instanceof Error
+      ? caught.message
+      : "The delivery provider could not be reached. The authorization remains editable and unlocked.";
+    logDeliveryFailure(input.additionalServiceId, input.method, message);
+    return { ok: false, error: message };
+  }
 
-  await admin.from("additional_services").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", input.additionalServiceId);
-  return { url, results };
+  const delivered = results.some((result) => result.status === "sent" || result.status === "delivered");
+  if (!delivered) {
+    await admin.from("additional_service_share_links")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("additional_service_id", input.additionalServiceId)
+      .is("revoked_at", null);
+    const providerMessages = results
+      .filter((result) => result.status === "failed")
+      .map((result) => result.errorMessage)
+      .filter(Boolean);
+    const message = providerMessages.length
+      ? `${providerMessages.join(" ")} The authorization remains editable and unlocked.`
+      : "The authorization was not delivered, so it remains editable and unlocked.";
+    logDeliveryFailure(input.additionalServiceId, input.method, message);
+    return { ok: false, error: message };
+  }
+
+  const { data: locked, error: lockError } = await admin.from("additional_services")
+    .update({ status: "sent", sent_at: new Date().toISOString(), locked: true })
+    .eq("id", input.additionalServiceId)
+    .eq("status", "draft")
+    .eq("locked", false)
+    .select("id")
+    .maybeSingle();
+  if (lockError) throw lockError;
+  if (!locked) throw new Error("The authorization changed while it was being sent. Review its status before trying again.");
+
+  revalidatePath(`/projects/${a.project_id}`);
+  revalidatePath(`/additional-services/${input.additionalServiceId}`);
+  return { ok: true, url, results };
 }

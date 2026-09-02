@@ -1,4 +1,4 @@
-export function AcceptancePreviewCard() {
+export function AcceptancePreviewCard({ buttonText = "Accept Proposal" }: { buttonText?: string }) {
   return (
     <section className="public-acceptance-card public-acceptance-preview" aria-labelledby="preview-acceptance-title">
       <div className="public-acceptance-heading">
@@ -15,7 +15,7 @@ export function AcceptancePreviewCard() {
           <input type="checkbox" />
           I have reviewed this document and authorize HASA Concepts, LLC to proceed.
         </label>
-        <button className="public-primary" disabled type="button">Accept Proposal</button>
+        <button className="public-primary" disabled type="button">{buttonText}</button>
       </fieldset>
       <p id="preview-acceptance-note" className="public-preview-note">
         Acceptance is disabled in preview. No email, text message, customer link, view record, or lock is created.

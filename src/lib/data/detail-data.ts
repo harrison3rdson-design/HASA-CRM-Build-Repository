@@ -117,6 +117,31 @@ export async function getProjectDetail(projectId: string) {
   };
 }
 
+export async function getAdditionalServiceDetail(additionalServiceId: string) {
+  const s = createAdminClient();
+
+  const [{ data: authorization, error }, { data: deliveries, error: deliveriesError }] = await Promise.all([
+    s.from("additional_services").select(`
+      *,
+      project:projects(
+        id,project_number,project_name,project_location,client_id,primary_contact_id,
+        client:clients(id,company_name),
+        primary_contact:contacts(id,first_name,last_name,title,email,mobile_phone)
+      ),
+      acceptances:additional_service_acceptances(*)
+    `).eq("id", additionalServiceId).single(),
+    s.from("document_deliveries")
+      .select("id,delivery_method,recipient_name,recipient_address,status,error_message,sent_at,created_at")
+      .eq("document_type", "additional_service")
+      .eq("related_record_id", additionalServiceId)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  if (error) throw error;
+  if (deliveriesError) throw deliveriesError;
+  return { authorization, deliveries: deliveries ?? [] };
+}
+
 export async function getInvoiceDetail(invoiceId: string) {
   const s = createAdminClient();
 

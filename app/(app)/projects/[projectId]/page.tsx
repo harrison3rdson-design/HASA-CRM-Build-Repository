@@ -56,7 +56,7 @@ export default async function ProjectDetailPage({
 
       <Panel title="Additional Services">
         <div className="table-wrap"><table><thead><tr><th>Authorization</th><th>Description</th><th>Amount</th><th>Status</th><th>Approved By</th><th>Approval Date</th></tr></thead>
-        <tbody>{d.authorizations.map((a:any)=>{const acceptance=Array.isArray(a.acceptances)?a.acceptances[0]:null;return <tr key={a.id}><td>{a.authorization_number}</td><td>{a.description}</td><td>{money(a.authorized_amount)}</td><td>{a.status}</td><td>{acceptance?.signer_name??"—"}</td><td>{dateTime(acceptance?.accepted_at)}</td></tr>})}</tbody></table></div>
+        <tbody>{d.authorizations.map((a:any)=>{const acceptance=Array.isArray(a.acceptances)?a.acceptances[0]:null;return <tr key={a.id}><td><Link className="table-link" href={`/additional-services/${a.id}`}>{a.authorization_number}</Link></td><td>{a.description}</td><td>{money(a.authorized_amount)}</td><td>{a.status}</td><td>{acceptance?.signer_name??"—"}</td><td>{dateTime(acceptance?.accepted_at)}</td></tr>})}</tbody></table></div>
       </Panel>
 
       <Panel title="Invoices">

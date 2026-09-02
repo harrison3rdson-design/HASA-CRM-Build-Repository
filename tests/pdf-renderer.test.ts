@@ -6,9 +6,12 @@ import { resolveChromiumPackUrl } from "../src/lib/documents/chromium-pack-url";
 const read = (path: string) => readFileSync(resolve(path), "utf8");
 
 describe("serverless PDF renderer", () => {
-  it("uses the immutable Vercel deployment URL for its Chromium package", () => {
-    expect(resolveChromiumPackUrl({ VERCEL_URL: "example-deployment.vercel.app" })).toBe(
-      "https://example-deployment.vercel.app/chromium-pack.tar"
+  it("prefers the public production alias over a protected deployment URL", () => {
+    expect(resolveChromiumPackUrl({
+      VERCEL_URL: "protected-deployment.vercel.app",
+      VERCEL_PROJECT_PRODUCTION_URL: "example-production.vercel.app",
+    })).toBe(
+      "https://example-production.vercel.app/chromium-pack.tar"
     );
   });
 

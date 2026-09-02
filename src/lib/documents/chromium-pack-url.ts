@@ -5,7 +5,10 @@ export function resolveChromiumPackUrl(
 ) {
   if (environment.CHROMIUM_PACK_URL) return environment.CHROMIUM_PACK_URL;
 
-  const host = environment.VERCEL_URL ?? environment.VERCEL_PROJECT_PRODUCTION_URL;
+  // Production deployment URLs may be protected by Vercel Authentication.
+  // Prefer the public production alias so the function downloads the archive,
+  // not an authentication redirect page.
+  const host = environment.VERCEL_PROJECT_PRODUCTION_URL ?? environment.VERCEL_URL;
   if (host) return `https://${host}/chromium-pack.tar`;
 
   if (environment.NEXT_PUBLIC_APP_URL) {

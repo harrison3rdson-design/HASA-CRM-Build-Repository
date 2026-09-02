@@ -44,6 +44,20 @@ export default async function InvoiceDetailPage({
         : <p className="muted">No unbilled time or expenses were available. This draft has no line items yet.</p>}
       </Panel>
 
+      {d.invoice.invoice_type === "final" ? <Panel title="Final Invoice Reconciliation">
+        <div className="metric-grid">
+          <div className="metric"><span>Authorized Services</span><strong>{money(d.reconciliation.authorizedServiceFee)}</strong></div>
+          <div className="metric"><span>Prior Service Billing</span><strong>{money(d.reconciliation.priorServiceBilled)}</strong></div>
+          <div className="metric"><span>Current Final Service Billing</span><strong>{money(d.reconciliation.currentServiceBilled)}</strong></div>
+          <div className="metric"><span>Service Balance After Draft</span><strong>{money(d.reconciliation.remainingServiceFee)}</strong></div>
+        </div>
+        <p className="footnote">Billing method: {String(d.reconciliation.billingMethod).replaceAll("_", " ")}. Authorized reimbursable expenses are billed from actual approved expense entries and are separate from the service balance.</p>
+        <h3>Prior Project Invoices</h3>
+        {d.priorInvoices.length ? <div className="table-wrap"><table><thead><tr><th>Invoice</th><th>Date</th><th>Type</th><th>Status</th><th>Total</th><th>Balance</th></tr></thead>
+          <tbody>{d.priorInvoices.map((prior:any)=><tr key={prior.id}><td>{prior.invoice_number}</td><td>{prior.invoice_date}</td><td>{prior.invoice_type}</td><td>{prior.status}</td><td>{money(prior.total)}</td><td>{money(prior.balance_due)}</td></tr>)}</tbody></table></div>
+        : <p className="muted">No prior non-void invoices exist for this project.</p>}
+      </Panel> : null}
+
       <div className="two-column">
         <Panel title="Record Payment">
           <PaymentForm invoiceId={invoiceId} />

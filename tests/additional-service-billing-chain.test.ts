@@ -37,6 +37,7 @@ describe("approved-work invoice chain", () => {
     expect(migration).toContain("invoice_item_id is null");
     expect(migration).toContain("for update");
     expect(migration).toContain("build_invoice_from_unbilled");
-    expect(invoiceForm).toContain("Build from Unbilled Time and Expenses");
+    expect(invoiceForm).toContain("Include unbilled time");
+    expect(invoiceForm).toContain("Include unbilled expenses");
   });
 });

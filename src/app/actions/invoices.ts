@@ -14,6 +14,29 @@ export async function createInvoiceAction(formData: FormData) {
   const admin = createAdminClient();
 
   const projectId = requiredText(formData.get("project_id"), "Project");
+  const invoiceType = requiredText(formData.get("invoice_type"), "Invoice type");
+  if (!["advance", "progress", "final"].includes(invoiceType)) {
+    throw new Error("Invoice type must be Advance, Progress, or Final.");
+  }
+
+  const includeTime = invoiceType === "final" || boolValue(formData.get("include_time"));
+  const includeExpenses = invoiceType === "final" || boolValue(formData.get("include_expenses"));
+  const advanceMethod = invoiceType === "advance"
+    ? requiredText(formData.get("advance_method"), "Advance calculation")
+    : null;
+  const advanceValue = invoiceType === "advance"
+    ? numberValue(formData.get("advance_value"), "Advance value", { min: 0.01 })
+    : null;
+
+  if (invoiceType === "advance" && !["amount", "percentage"].includes(advanceMethod ?? "")) {
+    throw new Error("Choose a dollar amount or percentage for the advance.");
+  }
+  if (invoiceType === "advance" && advanceMethod === "percentage" && Number(advanceValue) > 100) {
+    throw new Error("Advance percentage cannot exceed 100.");
+  }
+  if (invoiceType === "progress" && !includeTime && !includeExpenses) {
+    throw new Error("Choose unbilled time, unbilled expenses, or both.");
+  }
 
   const { data: project, error: projectError } = await admin
     .from("projects")
@@ -55,7 +78,7 @@ export async function createInvoiceAction(formData: FormData) {
       invoice_number: invoiceNumber,
       project_id: projectId,
       client_id: project.client_id,
-      invoice_type: requiredText(formData.get("invoice_type"), "Invoice type"),
+      invoice_type: invoiceType,
       invoice_date: requiredText(formData.get("invoice_date"), "Invoice date"),
       due_date: null,
       payment_terms: parsePaymentTerms(optionalText(formData.get("payment_terms")) ?? inheritedPaymentTerms),
@@ -70,14 +93,16 @@ export async function createInvoiceAction(formData: FormData) {
 
   if (error) throw error;
 
-  if (boolValue(formData.get("include_unbilled_work"))) {
-    const { error: buildError } = await admin.rpc("build_invoice_from_unbilled", {
-      p_invoice_id: data.id,
-    });
-    if (buildError) {
-      await admin.from("invoices").delete().eq("id", data.id).eq("status", "draft");
-      throw buildError;
-    }
+  const { error: buildError } = await admin.rpc("build_invoice_workflow", {
+    p_invoice_id: data.id,
+    p_include_time: includeTime,
+    p_include_expenses: includeExpenses,
+    p_advance_method: advanceMethod,
+    p_advance_value: advanceValue,
+  });
+  if (buildError) {
+    await admin.from("invoices").delete().eq("id", data.id).eq("status", "draft");
+    throw buildError;
   }
 
   revalidatePath("/billing");

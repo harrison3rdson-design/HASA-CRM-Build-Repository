@@ -156,14 +156,45 @@ export async function getInvoiceDetail(invoiceId: string) {
     ]);
 
   if (error) throw error;
-  const { data: latestProjectInvoice, error: latestInvoiceError } = await s
-    .from("invoices")
-    .select("invoice_number")
-    .eq("project_id", invoice.project_id)
-    .order("invoice_number", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const [
+    { data: latestProjectInvoice, error: latestInvoiceError },
+    { data: billingContext, error: billingContextError },
+    { data: priorInvoices, error: priorInvoicesError },
+  ] = await Promise.all([
+    s.from("invoices")
+      .select("invoice_number")
+      .eq("project_id", invoice.project_id)
+      .order("invoice_number", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    s.from("project_invoice_context")
+      .select("authorized_fee,service_fee_authorized,billing_method")
+      .eq("id", invoice.project_id)
+      .single(),
+    s.from("invoices")
+      .select("id,invoice_number,invoice_date,invoice_type,status,total,amount_paid,balance_due")
+      .eq("project_id", invoice.project_id)
+      .neq("id", invoiceId)
+      .neq("status", "void")
+      .order("invoice_number"),
+  ]);
   if (latestInvoiceError) throw latestInvoiceError;
+  if (billingContextError) throw billingContextError;
+  if (priorInvoicesError) throw priorInvoicesError;
+
+  const priorInvoiceIds = (priorInvoices ?? []).map((priorInvoice) => priorInvoice.id);
+  const { data: priorItems, error: priorItemsError } = priorInvoiceIds.length
+    ? await s.from("invoice_items").select("invoice_id,item_type,amount").in("invoice_id", priorInvoiceIds)
+    : { data: [], error: null };
+  if (priorItemsError) throw priorItemsError;
+
+  const serviceItemTypes = new Set(["professional_fee", "progress", "hourly", "travel_time", "additional_service"]);
+  const priorServiceBilled = (priorItems ?? []).reduce((sum, item) => (
+    serviceItemTypes.has(item.item_type) ? sum + Number(item.amount) : sum
+  ), 0);
+  const currentServiceBilled = (items ?? []).reduce((sum, item) => (
+    serviceItemTypes.has(item.item_type) ? sum + Number(item.amount) : sum
+  ), 0);
 
   return {
     invoice,
@@ -171,5 +202,17 @@ export async function getInvoiceDetail(invoiceId: string) {
     items: items ?? [],
     payments: payments ?? [],
     deliveries: deliveries ?? [],
+    priorInvoices: priorInvoices ?? [],
+    reconciliation: {
+      billingMethod: billingContext.billing_method,
+      authorizedFee: Number(billingContext.authorized_fee),
+      authorizedServiceFee: Number(billingContext.service_fee_authorized),
+      priorServiceBilled,
+      currentServiceBilled,
+      remainingServiceFee: Math.max(
+        Number(billingContext.service_fee_authorized) - priorServiceBilled - currentServiceBilled,
+        0,
+      ),
+    },
   };
 }

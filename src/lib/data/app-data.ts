@@ -189,8 +189,8 @@ export async function getProposalFormData() {
 export async function getInvoiceFormData() {
   const s = createAdminClient();
   const [{ data: projects, error: projectsError }, { data: settings, error: settingsError }] = await Promise.all([
-    s.from("projects")
-      .select("id,project_number,project_name,source_revision_id")
+    s.from("project_invoice_context")
+      .select("id,project_number,project_name,source_revision_id,authorized_fee,service_fee_authorized,billing_method")
       .eq("status", "active")
       .order("project_number"),
     s.from("company_settings").select("default_payment_terms").limit(1).single(),
@@ -200,11 +200,8 @@ export async function getInvoiceFormData() {
   if (settingsError) throw settingsError;
 
   const defaultPaymentTerms = parsePaymentTerms(settings.default_payment_terms, "Default payment terms");
-  const revisionIds = (projects ?? [])
-    .map((project) => project.source_revision_id)
-    .filter((id): id is string => Boolean(id));
-
-  let termsByRevision = new Map<string, string>();
+  const revisionIds = (projects ?? []).map((project) => project.source_revision_id).filter(Boolean) as string[];
+  let termsByRevision = new Map<string, unknown>();
   if (revisionIds.length) {
     const { data: revisions, error: revisionsError } = await s
       .from("proposal_revisions")
@@ -219,6 +216,9 @@ export async function getInvoiceFormData() {
       id: project.id,
       project_number: project.project_number,
       project_name: project.project_name,
+      billing_method: project.billing_method,
+      authorized_fee: Number(project.authorized_fee),
+      service_fee_authorized: Number(project.service_fee_authorized),
       payment_terms: parsePaymentTerms(
         (project.source_revision_id && termsByRevision.get(project.source_revision_id)) || defaultPaymentTerms
       ),

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Panel } from "@/components/cards";
 import { ProjectSummary } from "@/components/projects/project-summary";
+import { DeleteTimeEntryButton } from "@/components/time/delete-time-entry-button";
 import { AdditionalServiceForm } from "@/components/forms/additional-service-form";
 import { getProjectDetail } from "@/lib/data/detail-data";
 import { dateTime, money, hours } from "@/lib/ui/format";
@@ -53,8 +54,8 @@ export default async function ProjectDetailPage({
       </div>
 
       <Panel title="Recent Time">
-        <div className="table-wrap"><table><thead><tr><th>Date</th><th>Approved Source</th><th>Activity</th><th>Description</th><th>Hours</th><th>Billable</th></tr></thead>
-        <tbody>{d.time.map((t:any)=><tr key={t.id}><td>{t.work_date}</td><td>{approvedSource(t, "source_additional_service_labor_item", "source_fee_item_id")}</td><td>{t.activity_type}</td><td>{t.description??"—"}</td><td>{hours(t.hours)}</td><td>{t.billable?"Yes":"No"}</td></tr>)}</tbody></table></div>
+        <div className="table-wrap"><table><thead><tr><th>Date</th><th>Approved Source</th><th>Activity</th><th>Description</th><th>Hours</th><th>Billable</th><th>Actions</th></tr></thead>
+        <tbody>{d.time.map((t:any)=><tr key={t.id}><td>{t.work_date}</td><td>{approvedSource(t, "source_additional_service_labor_item", "source_fee_item_id")}</td><td>{t.activity_type}</td><td>{t.description??"—"}</td><td>{hours(t.hours)}</td><td>{t.billable?"Yes":"No"}</td><td>{!t.locked && !t.invoice_item_id ? <DeleteTimeEntryButton timeEntryId={t.id} workDate={t.work_date} entryHours={Number(t.hours)} /> : <span className="muted">Locked</span>}</td></tr>)}</tbody></table></div>
       </Panel>
 
       <Panel title="Recent Expenses">

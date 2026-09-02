@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/server";
+import { createAdminClient } from "@/lib/supabase-admin";
 import { requiredText, optionalText, numberValue, boolValue } from "@/lib/validation/common";
 import { roundHoursUp } from "@/lib/time-increments";
 
 async function currentAppUserId(supabase: any, authUserId: string) {
   const { data, error } = await supabase
     .from("app_users")
-    .select("id,default_bill_rate,internal_cost_rate")
+    .select("id,role,active,default_bill_rate,internal_cost_rate")
     .eq("auth_user_id", authUserId)
     .single();
   if (error) throw error;
@@ -164,4 +165,46 @@ export async function addManualTimeAction(formData: FormData) {
   revalidatePath(`/projects/${projectId}`);
   const returnTo = optionalText(formData.get("return_to"));
   if (returnTo === `/projects/${projectId}`) redirect(returnTo);
+}
+
+export async function deleteTimeEntryAction(timeEntryId: string) {
+  const { supabase, authUser } = await requireUser();
+  const user = await currentAppUserId(supabase, authUser.id);
+
+  if (!user.active) throw new Error("Active application user required.");
+
+  const { data: entry, error: entryError } = await supabase
+    .from("time_entries")
+    .select("id,project_id,user_id,hours,locked,invoice_item_id")
+    .eq("id", timeEntryId)
+    .maybeSingle();
+
+  if (entryError) throw entryError;
+  if (!entry) throw new Error("This time entry no longer exists.");
+  if (entry.locked || entry.invoice_item_id) {
+    throw new Error("Invoiced or locked time cannot be deleted.");
+  }
+
+  const canManageAll = ["owner_admin", "project_manager"].includes(user.role);
+  if (entry.user_id !== user.id && !canManageAll) {
+    throw new Error("You do not have permission to delete this time entry.");
+  }
+
+  const admin = createAdminClient();
+  const { data: deleted, error: deleteError } = await admin
+    .from("time_entries")
+    .delete()
+    .eq("id", entry.id)
+    .eq("locked", false)
+    .is("invoice_item_id", null)
+    .select("project_id")
+    .maybeSingle();
+
+  if (deleteError) throw deleteError;
+  if (!deleted) {
+    throw new Error("This time entry was locked or added to an invoice before it could be deleted.");
+  }
+
+  revalidatePath("/time");
+  revalidatePath(`/projects/${deleted.project_id}`);
 }

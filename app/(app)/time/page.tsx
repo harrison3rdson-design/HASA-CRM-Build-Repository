@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Panel } from "@/components/cards";
 import { ManualTimeForm } from "@/components/forms/manual-time-form";
+import { DeleteTimeEntryButton } from "@/components/time/delete-time-entry-button";
 import { getProjectWorkOptions, getTimeEntries } from "@/lib/data/app-data";
 import { hours, money } from "@/lib/ui/format";
 
@@ -37,7 +38,7 @@ export default async function TimePage({
       </Panel>
     </div>
     <Panel title="Recent Time">
-      <div className="table-wrap"><table><thead><tr><th>Date</th><th>Project</th><th>Approved Source</th><th>Activity</th><th>Description</th><th>Hours</th><th>Value</th></tr></thead><tbody>{rows.map((x:any)=><tr key={x.id}><td>{x.work_date}</td><td>{x.project?.project_number??"—"}</td><td>{sourceLabel(x)}</td><td>{x.is_travel_time?"Travel Time":x.activity_type}</td><td>{x.description??"—"}</td><td>{hours(x.hours)}</td><td>{money(Number(x.hours)*Number(x.billing_rate))}</td></tr>)}</tbody></table></div>
+      <div className="table-wrap"><table><thead><tr><th>Date</th><th>Project</th><th>Approved Source</th><th>Activity</th><th>Description</th><th>Hours</th><th>Value</th><th>Actions</th></tr></thead><tbody>{rows.map((x:any)=><tr key={x.id}><td>{x.work_date}</td><td>{x.project?.project_number??"—"}</td><td>{sourceLabel(x)}</td><td>{x.is_travel_time?"Travel Time":x.activity_type}</td><td>{x.description??"—"}</td><td>{hours(x.hours)}</td><td>{money(Number(x.hours)*Number(x.billing_rate))}</td><td>{!x.locked && !x.invoice_item_id ? <DeleteTimeEntryButton timeEntryId={x.id} workDate={x.work_date} entryHours={Number(x.hours)} /> : <span className="muted">Locked</span>}</td></tr>)}</tbody></table></div>
     </Panel>
   </>;
 }

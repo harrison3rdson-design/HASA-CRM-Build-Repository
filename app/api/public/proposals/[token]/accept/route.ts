@@ -5,6 +5,11 @@ import { getPublicProposalByToken } from "@/lib/public/proposal";
 import { executedProposalHtml } from "@/lib/documents/executed-html";
 import { renderHtmlToPdf } from "@/lib/documents/playwright-pdf";
 import { sendInternalAcceptanceNotification } from "@/lib/delivery/customer-action-notification";
+import {
+  publicRequestErrorResponse,
+  readPublicAcceptance,
+  validatePublicToken,
+} from "@/lib/security/public-request";
 
 export const maxDuration = 60;
 
@@ -13,42 +18,35 @@ export async function POST(
   context: { params: Promise<{ token: string }> }
 ) {
   try {
-    const { token } = await context.params;
-    const signer = await request.json();
-
-    if (!String(signer.signerName ?? "").trim()) {
-      return NextResponse.json({ error: "Signer name is required." }, { status: 400 });
-    }
+    const { token: rawToken } = await context.params;
+    const token = validatePublicToken(rawToken);
+    const signer = await readPublicAcceptance(request);
 
     const data = await getPublicProposalByToken(token);
     const pdf = await renderHtmlToPdf(executedProposalHtml(data, signer));
     const admin = createAdminClient();
 
     const path = `clients/${data.proposal.client?.id ?? "client"}/proposals/${data.proposal.proposal_number}/executed-R${data.revision.revision_number}-${crypto.randomUUID()}.pdf`;
-
     const { error: uploadError } = await admin.storage
       .from(process.env.DOCUMENTS_BUCKET ?? "hasa-documents")
       .upload(path, pdf.bytes, { contentType: "application/pdf", upsert: false });
-
     if (uploadError) throw uploadError;
 
     const forwarded = request.headers.get("x-forwarded-for");
     const ip = forwarded?.split(",")[0]?.trim() ?? null;
-
     const { data: projectId, error } = await admin.rpc("finalize_proposal_acceptance", {
       p_token_hash: hashPublicToken(token),
       p_signer_name: signer.signerName,
-      p_signer_title: signer.signerTitle || null,
-      p_signer_email: signer.signerEmail || null,
-      p_signer_mobile: signer.signerMobile || null,
-      p_signature_type: signer.signatureType || "typed",
-      p_acceptance_statement: signer.acceptanceStatement || "Accepted electronically.",
+      p_signer_title: signer.signerTitle,
+      p_signer_email: signer.signerEmail,
+      p_signer_mobile: signer.signerMobile,
+      p_signature_type: signer.signatureType,
+      p_acceptance_statement: signer.acceptanceStatement,
       p_ip_address: ip,
       p_user_agent: request.headers.get("user-agent"),
       p_executed_pdf_path: path,
       p_document_hash: pdf.sha256,
     });
-
     if (error) throw error;
 
     const notification = await sendInternalAcceptanceNotification({
@@ -58,11 +56,10 @@ export async function POST(
       reference: `Proposal ${data.proposal.proposal_number}`,
       projectName: data.proposal.project_name,
       clientName: data.proposal.client?.company_name,
-      signerName: String(signer.signerName).trim(),
-      signerEmail: signer.signerEmail || null,
-      signerMobile: signer.signerMobile || null,
+      signerName: signer.signerName,
+      signerEmail: signer.signerEmail,
+      signerMobile: signer.signerMobile,
     });
-
     if (notification.status === "failed") {
       console.error("[proposal-acceptance-notification] failed", {
         proposalId: data.proposal.id,
@@ -74,10 +71,12 @@ export async function POST(
       accepted: true,
       projectId,
       acceptedAt: new Date().toISOString(),
-      signerName: String(signer.signerName).trim(),
+      signerName: signer.signerName,
       reference: `Proposal ${data.proposal.proposal_number}`,
     });
   } catch (error) {
+    const requestError = publicRequestErrorResponse(error);
+    if (requestError) return requestError;
     console.error("[proposal-acceptance] failed", {
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,

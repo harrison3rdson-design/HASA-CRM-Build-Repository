@@ -17,14 +17,15 @@ describe("customer approval confirmation", () => {
     expect(card).not.toContain("<form action={submit}");
   });
 
-  it("returns receipt details from both public acceptance routes", () => {
+  it("returns normalized receipt details from both public acceptance routes", () => {
     for (const path of [
       "app/api/public/proposals/[token]/accept/route.ts",
       "app/api/public/additional-services/[token]/accept/route.ts",
     ]) {
       const route = read(path);
+      expect(route).toContain("readPublicAcceptance(request)");
       expect(route).toContain("acceptedAt: new Date().toISOString()");
-      expect(route).toContain("signerName: String(signer.signerName).trim()");
+      expect(route).toContain("signerName: signer.signerName");
       expect(route).toContain("reference:");
     }
   });

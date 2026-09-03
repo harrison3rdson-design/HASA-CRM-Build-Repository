@@ -22,6 +22,14 @@ describe("phase 3 security hardening", () => {
     expect(source("src/lib/supabase-admin.ts")).toContain('import "server-only"');
   });
 
+  it("hides framework details and prevents customer-document indexing", () => {
+    const config = source("next.config.ts");
+    expect(config).toContain("poweredByHeader: false");
+    expect(config).toContain("X-Permitted-Cross-Domain-Policies");
+    expect(config).toContain("X-Robots-Tag");
+    expect(config).toContain('source: "/public/:path*"');
+  });
+
   it("validates upload identifiers and filenames", () => {
     expect(requiredUuid("45327e16-94a7-4653-9440-f9ddcbc230bb", "Project"))
       .toBe("45327e16-94a7-4653-9440-f9ddcbc230bb");

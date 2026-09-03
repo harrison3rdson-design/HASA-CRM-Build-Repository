@@ -20,6 +20,8 @@ const securityHeaders = [
   { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
+  { key: "X-DNS-Prefetch-Control", value: "off" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
@@ -29,6 +31,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
   experimental: {
     serverActions: {
       bodySizeLimit: "12mb",
@@ -41,7 +44,15 @@ const nextConfig: NextConfig = {
     "/*": ["./public/branding/**/*"],
   },
   async headers() {
-    return [{ source: "/(.*)", headers: securityHeaders }];
+    const privateDocumentHeaders = [
+      { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive, nosnippet" },
+    ];
+    return [
+      { source: "/(.*)", headers: securityHeaders },
+      { source: "/public/:path*", headers: privateDocumentHeaders },
+      { source: "/proposal-previews/:path*", headers: privateDocumentHeaders },
+      { source: "/additional-service-previews/:path*", headers: privateDocumentHeaders },
+    ];
   },
 };
 

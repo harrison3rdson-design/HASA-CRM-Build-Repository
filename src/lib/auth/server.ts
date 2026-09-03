@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { getMfaStatus, isMfaVerified } from "@/lib/auth/mfa";
 import type { AppRole } from "@/lib/auth/roles";
 import { createAdminClient } from "@/lib/supabase-admin";
@@ -85,7 +86,7 @@ export async function requireActiveUser() {
 
   const mfaStatus = await getMfaStatus(supabase);
   if (!isMfaVerified(mfaStatus)) {
-    throw new Error("MFA verification required.");
+    redirect("/mfa");
   }
 
   return {

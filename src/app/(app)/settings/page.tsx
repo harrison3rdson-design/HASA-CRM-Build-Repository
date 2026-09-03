@@ -1,5 +1,6 @@
 import { Panel } from "@/components/cards";
 import { SettingsForm } from "@/components/forms/settings-form";
+import { MfaManagement } from "@/components/settings/mfa-management";
 import { UserManagement } from "@/components/settings/user-management";
 import { getCurrentAppUser } from "@/lib/auth/server";
 import { getCompanySettings } from "@/lib/data/app-data";
@@ -12,10 +13,13 @@ export default async function Page() {
   return (
     <>
       <div className="page-heading">
-        <div><h1>Settings</h1><p>Company, branding, billing defaults, integrations, and user access.</p></div>
+        <div><h1>Settings</h1><p>Company, branding, billing defaults, integrations, account security, and user access.</p></div>
       </div>
       <Panel title="Company Settings">
         <SettingsForm settings={settings} />
+      </Panel>
+      <Panel title="Account Security">
+        <MfaManagement />
       </Panel>
       {managedUsers ? (
         <Panel title="User Access & Roles">

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Panel } from "@/components/cards";
 import { InvoiceSummary } from "@/components/billing/invoice-summary";
 import { IssueInvoiceButton } from "@/components/billing/issue-invoice-button";
@@ -25,6 +26,14 @@ export default async function InvoiceDetailPage({
       <div className="page-heading">
         <div><h1>Invoice {d.invoice.invoice_number}</h1><p>{d.invoice.client?.company_name} · {d.invoice.project?.project_name}</p></div>
         <div className="button-row">
+          <Link
+            className="secondary-button"
+            href={`/api/invoices/${invoiceId}/preview`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Preview Customer PDF
+          </Link>
           {canDeleteDraft ? (
             <DeleteInvoiceButton
               invoiceId={invoiceId}

@@ -1,5 +1,8 @@
 import { money } from "@/lib/ui/format";
 import { proposalRevisionLabel } from "@/lib/proposal-revisions";
+import { hasaHorizontalLogoDataUri } from "@/lib/branding/assets";
+
+const HASA_LOGO_DATA_URI = hasaHorizontalLogoDataUri();
 
 export function executedProposalHtml(data: any, signer: any) {
   const sections = (data.sections ?? []).map((s:any) =>
@@ -16,13 +19,14 @@ export function executedProposalHtml(data: any, signer: any) {
 
   return `<!doctype html><html><head><meta charset="utf-8"><style>
     body{font-family:Arial,sans-serif;color:#222;font-size:11pt;line-height:1.45}
-    header{border-bottom:2px solid #222;padding-bottom:12px;margin-bottom:20px}
+    header{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;border-bottom:2px solid #222;padding-bottom:12px;margin-bottom:20px}
+    header img{display:block;max-width:240px;max-height:110px;object-fit:contain}.document-meta{text-align:right}
     h1{font-size:20pt;margin:0}h2{font-size:13pt;margin-top:20px}
     table{width:100%;border-collapse:collapse}td{padding:6px;border-bottom:1px solid #ddd}
     td:last-child{text-align:right}.accept{margin-top:28px;border-top:1px solid #999;padding-top:14px}
   </style></head><body>
-    <header><h1>STATEMENT OF WORK BY HASA CONCEPTS, LLC</h1>
-    <div>Proposal #${escapeHtml(data.proposal.proposal_number)} · ${escapeHtml(proposalRevisionLabel(data.revision.revision_number))}</div></header>
+    <header><img src="${HASA_LOGO_DATA_URI}" alt="HASA Concepts">
+    <div class="document-meta"><h1>STATEMENT OF WORK</h1><div>Proposal #${escapeHtml(data.proposal.proposal_number)} · ${escapeHtml(proposalRevisionLabel(data.revision.revision_number))}</div></div></header>
     <h2>${escapeHtml(data.proposal.project_name)}</h2>
     <p>Client: ${escapeHtml(data.proposal.client?.company_name ?? "")}</p>
     ${sections}
@@ -48,12 +52,13 @@ export function executedAuthorizationHtml(data: any, signer: any) {
   ).join("");
   return `<!doctype html><html><head><meta charset="utf-8"><style>
     body{font-family:Arial,sans-serif;color:#222;font-size:11pt;line-height:1.45}
-    header{border-bottom:2px solid #222;padding-bottom:12px;margin-bottom:20px}
+    header{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;border-bottom:2px solid #222;padding-bottom:12px;margin-bottom:20px}
+    header img{display:block;max-width:240px;max-height:110px;object-fit:contain}.document-meta{text-align:right}
     h1{font-size:20pt}h2{font-size:13pt;margin-top:20px}
     table{width:100%;border-collapse:collapse}td{padding:6px;border-bottom:1px solid #ddd}td:last-child{text-align:right}
     .accept{margin-top:28px;border-top:1px solid #999;padding-top:14px}
   </style></head><body>
-    <header><strong>HASA CONCEPTS, LLC</strong><div>${escapeHtml(a.authorization_number)}</div></header>
+    <header><img src="${HASA_LOGO_DATA_URI}" alt="HASA Concepts"><div class="document-meta">Authorization #${escapeHtml(a.authorization_number)}</div></header>
     <h1>Additional Service Authorization</h1>
     <p><strong>Project:</strong> ${escapeHtml(a.project?.project_number ?? "")} — ${escapeHtml(a.project?.project_name ?? "")}</p>
     <p>${escapeHtml(a.description ?? "").replace(/\n/g,"<br>")}</p>

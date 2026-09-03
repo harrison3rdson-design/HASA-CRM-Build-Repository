@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { money } from "@/lib/ui/format";
 
 type AdditionalServiceDocumentProps = {
@@ -45,7 +46,14 @@ export function AdditionalServiceDocument({ authorization, company }: Additional
     <>
       <header className="public-header">
         <div className="public-brand">
-          <strong>{company.display_name}</strong>
+          <Image
+            className="public-brand-logo"
+            src="/branding/hasa-logo-horizontal.jpeg"
+            alt="HASA Concepts"
+            width={240}
+            height={111}
+            priority
+          />
           <span>{company.legal_name}</span>
         </div>
         <div className="public-meta">Authorization #{authorization.authorization_number}</div>

@@ -20,6 +20,15 @@ describe("customer document previews and branding", () => {
       .toContain("hasaHorizontalLogoDataUri");
   });
 
+  it("packages filesystem branding assets with every serverless PDF route", () => {
+    const config = source("next.config.ts");
+    const invoiceRenderer = source("src/lib/invoices/render.ts");
+
+    expect(config).toContain("outputFileTracingIncludes");
+    expect(config).toContain('"./public/branding/**/*"');
+    expect(invoiceRenderer).not.toContain("const HASA_LOGO_DATA_URI = hasaHorizontalLogoDataUri()");
+  });
+
   it("previews the same invoice PDF renderer used for customer delivery without uploading or changing status", () => {
     const previewRoute = source("app/api/invoices/[invoiceId]/preview/route.ts");
     const sourcePreviewRoute = source("src/app/api/invoices/[invoiceId]/preview/route.ts");

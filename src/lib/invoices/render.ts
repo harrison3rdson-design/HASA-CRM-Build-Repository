@@ -4,8 +4,6 @@ import { buildReceiptAppendixHtml } from "@/lib/documents/receipt-appendix";
 import { hasaHorizontalLogoDataUri } from "@/lib/branding/assets";
 import { money } from "@/lib/ui/format";
 
-const HASA_LOGO_DATA_URI = hasaHorizontalLogoDataUri();
-
 function esc(value: unknown) {
   return String(value ?? "").replace(/[&<>"']/g, (character) => ({
     "&": "&amp;",
@@ -43,6 +41,7 @@ function invoiceDueDateLabel(invoice: any) {
 
 export async function buildInvoiceHtml(invoiceId: string, options?: { dueDate?: string }) {
   const { admin, invoice, items, company } = await loadInvoiceDocument(invoiceId, options?.dueDate);
+  const hasaLogoDataUri = hasaHorizontalLogoDataUri();
   const rows = items.map((item: any) => `<tr>
     <td>${esc(item.description)}</td>
     <td>${esc(item.quantity)}</td>
@@ -66,7 +65,7 @@ export async function buildInvoiceHtml(invoiceId: string, options?: { dueDate?: 
     .page-break{page-break-before:always}.receipt-section{page-break-inside:avoid;border-bottom:1px solid #ddd;padding:0 0 16px;margin:0 0 18px}
     .receipt-image img{max-width:100%;max-height:7in;object-fit:contain}.receipt-image figcaption{font-size:9pt;color:#666}
   </style></head><body>
-    <header><img src="${HASA_LOGO_DATA_URI}" alt="HASA Concepts">
+    <header><img src="${hasaLogoDataUri}" alt="HASA Concepts">
       <div class="invoice-title"><h1>INVOICE</h1><strong>${esc(invoice.invoice_number)}</strong></div>
     </header>
     <p><strong>Bill To:</strong><br>${esc(invoice.client?.company_name)}</p>

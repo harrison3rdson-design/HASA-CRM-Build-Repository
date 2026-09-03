@@ -32,7 +32,7 @@ describe("customer approval confirmation", () => {
   it("shows approval identity and date in the internal proposal UI", () => {
     const proposal = read("app/(app)/proposals/[proposalId]/page.tsx");
 
-    expect(proposal).toContain("Customer Approval Records");
+    expect(proposal).toContain("Customer Authorization Records");
     expect(proposal).toContain("Approved By");
     expect(proposal).toContain("Approval Date");
     expect(proposal).toContain("signer_email");

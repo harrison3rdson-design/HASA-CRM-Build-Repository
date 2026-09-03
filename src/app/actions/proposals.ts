@@ -15,11 +15,41 @@ import {
 import { parseProposalSectionType } from "@/lib/proposal-sections";
 import { selectDefaultProposalContact } from "@/lib/proposal-contacts";
 import { roundHoursUp } from "@/lib/time-increments";
+import { Policies } from "@/lib/auth/action-policy";
+
+const MANUAL_AUTHORIZATION_FILE_LIMIT = 10 * 1024 * 1024;
+const MANUAL_AUTHORIZATION_FILE_EXTENSIONS = new Set(["pdf", "eml", "msg", "png", "jpg", "jpeg"]);
 
 export type CreateProposalActionState = {
   status: "idle" | "error";
   message: string;
 };
+
+export type ManualProposalAuthorizationResult =
+  | { ok: true; projectId: string }
+  | { ok: false; error: string };
+
+function manualAuthorizationMethod(value: FormDataEntryValue | null): "verbal" | "email" {
+  const method = requiredText(value, "Authorization method");
+  if (method !== "verbal" && method !== "email") {
+    throw new Error("Authorization method must be Verbal or Email.");
+  }
+  return method;
+}
+
+function evidenceFile(formData: FormData): File | null {
+  const value = formData.get("evidence_file");
+  if (!(value instanceof File) || value.size === 0) return null;
+  if (value.size > MANUAL_AUTHORIZATION_FILE_LIMIT) {
+    throw new Error("Authorization evidence cannot exceed 10 MB.");
+  }
+
+  const extension = value.name.split(".").pop()?.toLowerCase() ?? "";
+  if (!MANUAL_AUTHORIZATION_FILE_EXTENSIONS.has(extension)) {
+    throw new Error("Authorization evidence must be a PDF, email file, or PNG/JPG image.");
+  }
+  return value;
+}
 
 function validationErrorMessage(error: unknown): string {
   return error instanceof Error
@@ -496,4 +526,129 @@ export async function deleteUnissuedDraftProposalAction(proposalId: string) {
   revalidatePath("/proposals");
   revalidatePath("/clients");
   return deletedProposalNumber;
+}
+
+export async function recordManualProposalAuthorizationAction(
+  formData: FormData,
+): Promise<ManualProposalAuthorizationResult> {
+  try {
+    const { appUser } = await Policies.proposalWrite();
+    const admin = createAdminClient();
+    const proposalId = requiredText(formData.get("proposal_id"), "Proposal");
+    const revisionId = requiredText(formData.get("revision_id"), "Proposal version");
+    const method = manualAuthorizationMethod(formData.get("authorization_method"));
+    const signerName = requiredText(formData.get("signer_name"), "Customer name");
+    const signerTitle = optionalText(formData.get("signer_title"));
+    const signerEmail = optionalText(formData.get("signer_email"));
+    const signerMobile = optionalText(formData.get("signer_mobile"));
+    const authorizedAtText = requiredText(formData.get("authorized_at"), "Authorization date and time");
+    const notes = requiredText(formData.get("recording_notes"), "Authorization notes");
+    const attested = boolValue(formData.get("authorization_attestation"));
+    const file = evidenceFile(formData);
+
+    if (!attested) throw new Error("Confirm that the authorization information is accurate.");
+    if (method === "email" && !file) throw new Error("Attach the customer email or other written authorization evidence.");
+    if (notes.length > 4000) throw new Error("Authorization notes cannot exceed 4,000 characters.");
+
+    const authorizedAt = new Date(authorizedAtText);
+    if (Number.isNaN(authorizedAt.getTime())) throw new Error("Authorization date and time are invalid.");
+    if (authorizedAt.getTime() > Date.now() + 5 * 60 * 1000) {
+      throw new Error("Authorization date and time cannot be in the future.");
+    }
+
+    const { data: revision, error: revisionError } = await admin
+      .from("proposal_revisions")
+      .select(`
+        id,proposal_id,revision_number,locked,created_at,
+        proposal:proposals(id,proposal_number,client_id,current_revision,status)
+      `)
+      .eq("id", revisionId)
+      .single();
+    if (revisionError) throw revisionError;
+
+    const proposal = Array.isArray(revision.proposal) ? revision.proposal[0] : revision.proposal;
+    if (!proposal || proposal.id !== proposalId) throw new Error("The proposal version does not match this proposal.");
+    if (proposal.current_revision !== revision.revision_number) {
+      throw new Error("Only the current proposal version can be authorized.");
+    }
+    if (!revision.locked || !["sent", "viewed", "changes_requested"].includes(proposal.status)) {
+      throw new Error("Only a sent proposal awaiting customer authorization can be recorded manually.");
+    }
+    if (authorizedAt < new Date(revision.created_at)) {
+      throw new Error("Authorization date and time cannot be earlier than the proposal version.");
+    }
+
+    let evidenceDocumentId: string | null = null;
+    let evidenceStoragePath: string | null = null;
+
+    if (file) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      evidenceStoragePath = `clients/${proposal.client_id}/proposals/${proposal.proposal_number}/authorizations/${crypto.randomUUID()}-${safeName}`;
+      const bytes = Buffer.from(await file.arrayBuffer());
+      const bucket = process.env.DOCUMENTS_BUCKET ?? "hasa-documents";
+      const { error: storageError } = await admin.storage.from(bucket).upload(
+        evidenceStoragePath,
+        bytes,
+        { contentType: file.type || "application/octet-stream", upsert: false },
+      );
+      if (storageError) throw storageError;
+
+      const { data: document, error: documentError } = await admin.from("documents").insert({
+        client_id: proposal.client_id,
+        document_type: "proposal_authorization_evidence",
+        document_subtype: method,
+        title: `Proposal ${proposal.proposal_number} ${method} authorization evidence`,
+        storage_path: evidenceStoragePath,
+        original_filename: file.name,
+        mime_type: file.type || null,
+        file_size: file.size,
+        related_record_type: "proposal",
+        related_record_id: proposal.id,
+        document_date: authorizedAt.toISOString().slice(0, 10),
+        locked: true,
+        uploaded_by: appUser.id,
+      }).select("id").single();
+
+      if (documentError) {
+        await admin.storage.from(bucket).remove([evidenceStoragePath]);
+        throw documentError;
+      }
+      evidenceDocumentId = document.id;
+    }
+
+    const { data: projectId, error: acceptanceError } = await admin.rpc(
+      "record_manual_proposal_acceptance",
+      {
+        p_revision_id: revisionId,
+        p_signer_name: signerName,
+        p_signer_title: signerTitle,
+        p_signer_email: signerEmail,
+        p_signer_mobile: signerMobile,
+        p_authorization_method: method,
+        p_authorized_at: authorizedAt.toISOString(),
+        p_recording_notes: notes,
+        p_evidence_document_id: evidenceDocumentId,
+        p_recorded_by: appUser.id,
+      },
+    );
+
+    if (acceptanceError || !projectId) {
+      if (evidenceDocumentId) await admin.from("documents").delete().eq("id", evidenceDocumentId);
+      if (evidenceStoragePath) {
+        await admin.storage.from(process.env.DOCUMENTS_BUCKET ?? "hasa-documents").remove([evidenceStoragePath]);
+      }
+      throw acceptanceError ?? new Error("The manual authorization could not be recorded.");
+    }
+
+    revalidatePath("/proposals");
+    revalidatePath(`/proposals/${proposalId}`);
+    revalidatePath(`/projects/${projectId}`);
+    revalidatePath("/documents");
+    return { ok: true, projectId: String(projectId) };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "The manual authorization could not be recorded.",
+    };
+  }
 }

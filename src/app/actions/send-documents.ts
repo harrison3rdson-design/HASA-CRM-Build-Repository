@@ -57,8 +57,11 @@ export async function sendProposalAction(input: {
   if (revision.proposal_id !== input.proposalId || revision.revision_number !== proposal.current_revision) {
     throw new Error("Only the current revision of this proposal can be sent.");
   }
-  if (revision.locked) throw new Error("This proposal revision has already been sent and locked.");
-  if (proposal.status !== "draft") throw new Error("Only a draft proposal can be sent.");
+  const isInitialSend = proposal.status === "draft" && !revision.locked;
+  const isResend = revision.locked && ["sent", "viewed", "changes_requested"].includes(proposal.status);
+  if (!isInitialSend && !isResend) {
+    throw new Error("Only an unsent draft or a sent proposal awaiting authorization can be delivered.");
+  }
 
   let contact = normalizeRelatedContact(proposal.primary_contact);
   if (!contact) {
@@ -84,6 +87,12 @@ export async function sendProposalAction(input: {
   if (!contact?.email && !contact?.mobile_phone) {
     throw new Error("Assign a Primary Contact with an email address or mobile number before sending.");
   }
+  if ((input.method === "email" || input.method === "both") && !contact.email) {
+    return { ok: false, error: "The proposal contact does not have an email address." };
+  }
+  if ((input.method === "sms" || input.method === "both") && !contact.mobile_phone) {
+    return { ok: false, error: "The proposal contact does not have a mobile number." };
+  }
 
   const providerError = requestedProviderError(input.method);
   if (providerError) {
@@ -100,7 +109,11 @@ export async function sendProposalAction(input: {
     return { ok: false, error: message };
   }
 
-  const { token } = await createProposalShareLink(input.revisionId);
+  const { token, tokenHash } = await createProposalShareLink(
+    input.revisionId,
+    15,
+    { revokeExisting: !isResend },
+  );
   const url = `${appUrl}/public/proposals/${token}`;
 
   let results: Awaited<ReturnType<typeof deliverPublicLink>>;
@@ -114,25 +127,39 @@ export async function sendProposalAction(input: {
       mobile: contact.mobile_phone,
       method: input.method,
       subject: `HASA Concepts Proposal ${proposal.proposal_number}`,
-      message: `Please review proposal ${proposal.proposal_number} for ${proposal.project_name}.`,
+      message: `${isResend ? "A new review link is available for" : "Please review"} proposal ${proposal.proposal_number} for ${proposal.project_name}.`,
+      idempotencyKey: `proposal-${input.proposalId}-${tokenHash}`,
     });
   } catch (error) {
+    await admin.from("proposal_share_links")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("token_hash", tokenHash)
+      .is("revoked_at", null);
     const message = error instanceof Error
       ? error.message
-      : "The delivery provider could not be reached. The proposal remains editable and unlocked.";
+      : isResend
+        ? "The delivery provider could not be reached. The previous customer link remains available."
+        : "The delivery provider could not be reached. The proposal remains editable and unlocked.";
     logDeliveryFailure(input.proposalId, input.method, message);
     return { ok: false, error: message };
   }
 
   const delivered = results.some((result) => result.status === "sent" || result.status === "delivered");
   if (!delivered) {
+    await admin.from("proposal_share_links")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("token_hash", tokenHash)
+      .is("revoked_at", null);
     const providerMessages = results
       .filter((result) => result.status === "failed")
       .map((result) => result.errorMessage)
       .filter(Boolean);
-    const message = providerMessages.length
-      ? `${providerMessages.join(" ")} The proposal remains editable and unlocked.`
+    const fallback = isResend
+      ? "The new message was not delivered. The previous customer link remains available."
       : "The proposal was not delivered, so it remains editable and unlocked.";
+    const message = providerMessages.length
+      ? `${providerMessages.join(" ")} ${fallback}`
+      : fallback;
     logDeliveryFailure(input.proposalId, input.method, message);
     return { ok: false, error: message };
   }
@@ -142,6 +169,14 @@ export async function sendProposalAction(input: {
   });
   if (lockError) throw lockError;
   if (lockedProposalId !== input.proposalId) throw new Error("The sent revision does not belong to this proposal.");
+
+  if (isResend) {
+    await admin.from("proposal_share_links")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("proposal_revision_id", input.revisionId)
+      .neq("token_hash", tokenHash)
+      .is("revoked_at", null);
+  }
 
   revalidatePath("/proposals");
   revalidatePath(`/proposals/${input.proposalId}`);

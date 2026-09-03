@@ -13,6 +13,7 @@ export function SendProposalButton({
   hasMobile,
   emailConfigured,
   smsConfigured,
+  isResend = false,
 }: {
   proposalId: string;
   revisionId: string;
@@ -20,6 +21,7 @@ export function SendProposalButton({
   hasMobile: boolean;
   emailConfigured: boolean;
   smsConfigured: boolean;
+  isResend?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -49,7 +51,9 @@ export function SendProposalButton({
           disabled={pending || !canSend}
           onClick={() => {
             const confirmed = window.confirm(
-              "Send this proposal to the customer? This revision will be locked and can no longer be edited."
+              isResend
+                ? "Send a fresh customer link? The proposal version will remain locked. After successful delivery, earlier links will be revoked."
+                : "Send this proposal to the customer? This revision will be locked and can no longer be edited."
             );
             if (!confirmed) return;
 
@@ -69,7 +73,7 @@ export function SendProposalButton({
             });
           }}
         >
-          {pending ? "Sending…" : "Send & Lock"}
+          {pending ? "Sending…" : isResend ? "Resend Proposal" : "Send & Lock"}
         </button>
       </div>
       {!hasEmail && !hasMobile ? <p className="form-error">Add an email address or mobile number to the primary contact before sending.</p> : null}

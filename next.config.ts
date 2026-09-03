@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "12mb",
+    },
+  },
   // These packages locate runtime files dynamically and must not be bundled.
   serverExternalPackages: ["@sparticuz/chromium-min", "puppeteer-core"],
   // PDF renderers read these files from disk, so include them in every server trace.

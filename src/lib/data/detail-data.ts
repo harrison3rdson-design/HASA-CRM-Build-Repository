@@ -59,12 +59,28 @@ export async function getProposalDetail(proposalId: string) {
 
   const revisionIds = (revisions ?? []).map(r => r.id);
 
-  const [{ data: sections }, { data: fees }, { data: expenses }, { data: acceptances }] = await Promise.all([
+  const [
+    { data: sections },
+    { data: fees },
+    { data: expenses },
+    { data: acceptances },
+    { data: deliveries, error: deliveriesError },
+  ] = await Promise.all([
     revisionIds.length ? s.from("proposal_sections").select("*").in("proposal_revision_id", revisionIds).order("sort_order") : Promise.resolve({ data: [] } as any),
     revisionIds.length ? s.from("proposal_fee_items").select("*").in("proposal_revision_id", revisionIds).order("sort_order") : Promise.resolve({ data: [] } as any),
     revisionIds.length ? s.from("proposal_expense_estimates").select("*").in("proposal_revision_id", revisionIds).order("sort_order") : Promise.resolve({ data: [] } as any),
-    revisionIds.length ? s.from("proposal_acceptances").select("*").in("proposal_revision_id", revisionIds).order("accepted_at", { ascending: false }) : Promise.resolve({ data: [] } as any),
+    revisionIds.length ? s.from("proposal_acceptances").select(`
+      *,
+      recorded_by_user:app_users(first_name,last_name,email),
+      evidence_document:documents(id,title,original_filename)
+    `).in("proposal_revision_id", revisionIds).order("accepted_at", { ascending: false }) : Promise.resolve({ data: [] } as any),
+    s.from("document_deliveries")
+      .select("id,delivery_method,recipient_name,recipient_address,status,error_message,sent_at,created_at")
+      .eq("document_type", "proposal")
+      .eq("related_record_id", proposalId)
+      .order("created_at", { ascending: false }),
   ]);
+  if (deliveriesError) throw deliveriesError;
 
   return {
     proposal,
@@ -75,6 +91,7 @@ export async function getProposalDetail(proposalId: string) {
     fees: fees ?? [],
     expenses: expenses ?? [],
     acceptances: acceptances ?? [],
+    deliveries: deliveries ?? [],
   };
 }
 

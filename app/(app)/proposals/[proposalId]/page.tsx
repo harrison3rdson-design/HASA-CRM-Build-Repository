@@ -8,6 +8,7 @@ import { SendProposalButton } from "@/components/proposals/send-proposal-button"
 import { RevisionPaymentTermsForm } from "@/components/forms/revision-payment-terms-form";
 import { ProposalRevisionForm } from "@/components/forms/proposal-revision-form";
 import { ProposalPrimaryContactForm } from "@/components/forms/proposal-primary-contact-form";
+import { ManualProposalAuthorizationForm } from "@/components/proposals/manual-proposal-authorization-form";
 import { getProposalDetail } from "@/lib/data/detail-data";
 import { parsePaymentTerms } from "@/lib/payment-terms";
 import {
@@ -59,7 +60,38 @@ type AcceptanceRecord = {
   signer_email: string | null;
   signer_mobile: string | null;
   accepted_at: string;
+  authorization_method: "electronic" | "verbal" | "email";
+  recorded_at: string | null;
+  recording_notes: string | null;
+  recorded_by_user: {
+    first_name: string | null;
+    last_name: string | null;
+    email: string;
+  } | Array<{
+    first_name: string | null;
+    last_name: string | null;
+    email: string;
+  }> | null;
+  evidence_document: {
+    id: string;
+    title: string;
+    original_filename: string | null;
+  } | Array<{
+    id: string;
+    title: string;
+    original_filename: string | null;
+  }> | null;
 };
+
+function relatedOne<T>(value: T | T[] | null): T | null {
+  return Array.isArray(value) ? value[0] ?? null : value;
+}
+
+function authorizationMethodLabel(method: AcceptanceRecord["authorization_method"]) {
+  if (method === "verbal") return "Verbal";
+  if (method === "email") return "Email";
+  return "Electronic";
+}
 
 export default async function ProposalDetailPage({
   params,
@@ -117,6 +149,17 @@ export default async function ProposalDetailPage({
   const acceptanceByRevision = new Map(
     acceptances.map((acceptance) => [acceptance.proposal_revision_id, acceptance]),
   );
+  const latestAcceptance = latest ? acceptanceByRevision.get(latest.id) : null;
+  const canRecoverAuthorization = Boolean(
+    latest
+    && latest.locked
+    && !latestAcceptance
+    && ["sent", "viewed", "changes_requested"].includes(d.proposal.status)
+  );
+  const canSendProposal = Boolean(
+    latest
+    && ((!latest.locked && d.proposal.status === "draft") || canRecoverAuthorization)
+  );
 
   return (
     <>
@@ -150,7 +193,7 @@ export default async function ProposalDetailPage({
               Preview Customer View
             </Link>
           ) : null}
-          {latest && !latest.locked ? (
+          {canSendProposal && latest ? (
             <SendProposalButton
               proposalId={proposalId}
               revisionId={latest.id}
@@ -158,6 +201,7 @@ export default async function ProposalDetailPage({
               hasMobile={Boolean(primaryContact?.mobile_phone)}
               emailConfigured={isTransactionalEmailConfigured()}
               smsConfigured={isTwilioConfigured()}
+              isResend={latest.locked}
             />
           ) : null}
           {latest && !latest.locked && latest.revision_number > 1 ? (
@@ -220,6 +264,25 @@ export default async function ProposalDetailPage({
             </p>
           </Panel>
         ) : null}
+
+        {canRecoverAuthorization && latest ? (
+          <Panel title="Authorization Recovery">
+            <p className="manual-authorization-intro">
+              If the customer did not receive the proposal, use <strong>Resend Proposal</strong> above to issue a fresh secure link.
+              If the customer already authorized this exact version verbally or by email, record that authorization below.
+            </p>
+            <ManualProposalAuthorizationForm
+              proposalId={proposalId}
+              revisionId={latest.id}
+              defaultSigner={{
+                name: [primaryContact?.first_name, primaryContact?.last_name].filter(Boolean).join(" "),
+                title: "",
+                email: primaryContact?.email ?? "",
+                mobile: primaryContact?.mobile_phone ?? "",
+              }}
+            />
+          </Panel>
+        ) : null}
       </section>
 
       <section className="proposal-area proposal-summary-area" aria-labelledby="proposal-summary-area-title">
@@ -240,10 +303,17 @@ export default async function ProposalDetailPage({
         </Panel>
 
         {acceptances.length ? (
-          <Panel title="Customer Approval Records">
-            <p className="footnote">These records identify who electronically approved each proposal version and when the approval was completed.</p>
-            <div className="table-wrap"><table><thead><tr><th>Version</th><th>Approved</th><th>Name</th><th>Title</th><th>Email</th><th>Mobile</th></tr></thead>
-            <tbody>{acceptances.map((acceptance)=>{const revision=d.revisions.find((item:any)=>item.id===acceptance.proposal_revision_id);return <tr key={acceptance.id}><td>{revision?proposalRevisionLabel(revision.revision_number):"Proposal"}</td><td>{dateTime(acceptance.accepted_at)}</td><td>{acceptance.signer_name}</td><td>{acceptance.signer_title??"—"}</td><td>{acceptance.signer_email??"—"}</td><td>{acceptance.signer_mobile??"—"}</td></tr>})}</tbody></table></div>
+          <Panel title="Customer Authorization Records">
+            <p className="footnote">Electronic, verbal, and email authorizations are identified separately. Manual records show who entered them and link to supporting evidence when provided.</p>
+            <div className="table-wrap"><table><thead><tr><th>Version</th><th>Method</th><th>Authorized</th><th>Customer</th><th>Title</th><th>Email</th><th>Mobile</th><th>Recorded By</th><th>Recorded</th><th>Evidence</th><th>Notes</th></tr></thead>
+            <tbody>{acceptances.map((acceptance)=>{const revision=d.revisions.find((item:any)=>item.id===acceptance.proposal_revision_id);const recorder=relatedOne(acceptance.recorded_by_user);const evidence=relatedOne(acceptance.evidence_document);return <tr key={acceptance.id}><td>{revision?proposalRevisionLabel(revision.revision_number):"Proposal"}</td><td>{authorizationMethodLabel(acceptance.authorization_method)}</td><td>{dateTime(acceptance.accepted_at)}</td><td>{acceptance.signer_name}</td><td>{acceptance.signer_title??"—"}</td><td>{acceptance.signer_email??"—"}</td><td>{acceptance.signer_mobile??"—"}</td><td>{recorder?[recorder.first_name,recorder.last_name].filter(Boolean).join(" ")||recorder.email:"Customer"}</td><td>{dateTime(acceptance.recorded_at)}</td><td>{evidence?<Link className="table-link" href={`/api/documents/${evidence.id}/download`} rel="noreferrer" target="_blank">{evidence.original_filename??"Open evidence"}</Link>:"—"}</td><td>{acceptance.recording_notes??"—"}</td></tr>})}</tbody></table></div>
+          </Panel>
+        ) : null}
+
+        {d.deliveries.length ? (
+          <Panel title="Proposal Delivery History">
+            <div className="table-wrap"><table><thead><tr><th>Sent</th><th>Method</th><th>Recipient</th><th>Address</th><th>Status</th><th>Details</th></tr></thead>
+            <tbody>{d.deliveries.map((delivery:any)=><tr key={delivery.id}><td>{dateTime(delivery.sent_at??delivery.created_at)}</td><td className="capitalize">{String(delivery.delivery_method).replaceAll("_"," ")}</td><td>{delivery.recipient_name||"—"}</td><td>{delivery.recipient_address}</td><td className="capitalize">{delivery.status}</td><td>{delivery.error_message??"—"}</td></tr>)}</tbody></table></div>
           </Panel>
         ) : null}
 

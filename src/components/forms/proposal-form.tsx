@@ -107,7 +107,7 @@ export function ProposalForm({
       </label>
       <label>
         Validity (Days)
-        <input name="validity_days" type="number" min="1" defaultValue="15" required />
+        <input name="validity_days" type="number" min="1" defaultValue="90" required />
       </label>
       <label>
         Billing Method

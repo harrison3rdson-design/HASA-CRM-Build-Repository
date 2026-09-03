@@ -13,7 +13,8 @@ function sourceLabel(expense: any) {
   const authorization = Array.isArray(item?.additional_service)
     ? item.additional_service[0]
     : item?.additional_service;
-  return authorization?.authorization_number ?? (expense.source_estimate_id ? "Original Proposal" : "Manual");
+  return authorization?.authorization_number
+    ?? (expense.source_material_id ? "Original Proposal Materials" : expense.source_estimate_id ? "Original Proposal" : "Manual");
 }
 
 export default async function ExpensesPage({
@@ -28,8 +29,8 @@ export default async function ExpensesPage({
 
   return <>
     <div className="page-heading">
-      <div><h1>Expenses</h1><p>Record project expenses and calculate the billable amount.</p></div>
-      <Link className="primary-button" href="#add-expense">Add Expense</Link>
+      <div><h1>Expenses and Materials</h1><p>Record project purchases and reimbursable expenses, then calculate the billable amount.</p></div>
+      <Link className="primary-button" href="#add-expense">Add Expense or Material</Link>
     </div>
     <div id="add-expense">
       <Panel title={projectId ? "Add Expense to Project" : "New Expense"}>

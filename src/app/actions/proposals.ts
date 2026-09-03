@@ -9,6 +9,8 @@ import { parsePaymentTerms } from "@/lib/payment-terms";
 import {
   calculateExpenseAmount,
   calculateLaborAmount,
+  calculateMaterialAmount,
+  calculateMaterialUnitPrice,
   parseExpenseBillingRule,
   roundMoney,
 } from "@/lib/proposal-items";
@@ -84,6 +86,16 @@ function parseProposalItems(formData: FormData) {
     requires_receipt: boolean;
     sort_order: number;
   }>;
+  const materialItems = [] as Array<{
+    description: string;
+    quantity: number;
+    unit: string;
+    unit_cost: number;
+    markup_percent: number;
+    unit_price: number;
+    amount: number;
+    sort_order: number;
+  }>;
 
   const laborCount = itemCount(formData.get("labor_count"), "Labor line count");
   for (let index = 0; index < laborCount; index += 1) {
@@ -134,11 +146,39 @@ function parseProposalItems(formData: FormData) {
     });
   }
 
+  const materialCount = itemCount(formData.get("material_count"), "Material line count");
+  for (let index = 0; index < materialCount; index += 1) {
+    const description = optionalText(formData.get(`material_description_${index}`));
+    const quantityText = optionalText(formData.get(`material_quantity_${index}`));
+    const unit = optionalText(formData.get(`material_unit_${index}`));
+    const unitCostText = optionalText(formData.get(`material_unit_cost_${index}`));
+    const markupText = optionalText(formData.get(`material_markup_${index}`));
+    const quantityChanged = quantityText !== null && quantityText !== "1";
+    const hasMarkup = markupText !== null && Number(markupText) !== 0;
+    if (!description && !unitCostText && !quantityChanged && !hasMarkup) continue;
+
+    const quantity = numberValue(quantityText ?? "1", `Material line ${index + 1} quantity`, { min: 0 });
+    const unitCost = numberValue(unitCostText ?? "0", `Material line ${index + 1} unit cost`, { min: 0 });
+    const markupPercent = numberValue(markupText ?? "0", `Material line ${index + 1} markup`, { min: 0, max: 999.999 });
+    materialItems.push({
+      description: requiredText(description, `Material line ${index + 1} description`),
+      quantity,
+      unit: requiredText(unit, `Material line ${index + 1} unit`),
+      unit_cost: unitCost,
+      markup_percent: markupPercent,
+      unit_price: calculateMaterialUnitPrice(unitCost, markupPercent),
+      amount: calculateMaterialAmount(quantity, unitCost, markupPercent),
+      sort_order: index,
+    });
+  }
+
   return {
     feeItems,
     expenseItems,
+    materialItems,
     professionalFee: roundMoney(feeItems.reduce((sum, item) => sum + item.amount, 0)),
     estimatedExpenses: roundMoney(expenseItems.reduce((sum, item) => sum + item.estimated_amount, 0)),
+    estimatedMaterials: roundMoney(materialItems.reduce((sum, item) => sum + item.amount, 0)),
   };
 }
 
@@ -204,7 +244,7 @@ export async function createProposalAction(
     projectName,
     requestedContactId,
     scopeSections,
-    items: { feeItems, expenseItems, professionalFee, estimatedExpenses },
+    items: { feeItems, expenseItems, materialItems, professionalFee, estimatedExpenses, estimatedMaterials },
     validityDays,
     billingMethod,
   } = proposalInput;
@@ -277,6 +317,7 @@ export async function createProposalAction(
       revision_number: 1,
       professional_fee: professionalFee,
       estimated_expenses: estimatedExpenses,
+      estimated_materials: estimatedMaterials,
       payment_terms: parsedPaymentTerms,
       validity_days: validityDays,
       billing_method: billingMethod,
@@ -320,6 +361,16 @@ export async function createProposalAction(
     if (expenseError) {
       await discardIncompleteProposal();
       throw expenseError;
+    }
+  }
+
+  if (materialItems.length) {
+    const { error: materialError } = await supabase
+      .from("proposal_material_items")
+      .insert(materialItems.map((item) => ({ ...item, proposal_revision_id: revision.id })));
+    if (materialError) {
+      await discardIncompleteProposal();
+      throw materialError;
     }
   }
 
@@ -409,9 +460,9 @@ export async function updateProposalRevisionAction(formData: FormData) {
   const validityDays = numberValue(formData.get("validity_days"), "Validity days", { min: 1 });
   const billingMethod = optionalText(formData.get("billing_method")) ?? "fixed_fee";
   const scopeSections = parseProposalSections(formData);
-  const { feeItems, expenseItems } = parseProposalItems(formData);
+  const { feeItems, expenseItems, materialItems } = parseProposalItems(formData);
 
-  const { data: proposalId, error } = await admin.rpc("update_proposal_revision_draft_v2", {
+  const { data: proposalId, error } = await admin.rpc("update_proposal_revision_draft_v3", {
     p_revision_id: revisionId,
     p_payment_terms: paymentTerms,
     p_validity_days: validityDays,
@@ -419,6 +470,7 @@ export async function updateProposalRevisionAction(formData: FormData) {
     p_sections: scopeSections,
     p_fee_items: feeItems,
     p_expense_items: expenseItems,
+    p_material_items: materialItems,
   });
 
   if (error) throw error;
@@ -452,6 +504,7 @@ export async function createProposalRevisionAction(proposalId: string) {
       revision_number: nextRevision,
       professional_fee: current.professional_fee,
       estimated_expenses: current.estimated_expenses,
+      estimated_materials: current.estimated_materials,
       billing_method: current.billing_method,
       payment_terms: current.payment_terms,
       validity_days: current.validity_days,
@@ -479,6 +532,7 @@ export async function createProposalRevisionAction(proposalId: string) {
   await copyChildren("proposal_sections", "proposal_revision_id");
   await copyChildren("proposal_fee_items", "proposal_revision_id");
   await copyChildren("proposal_expense_estimates", "proposal_revision_id");
+  await copyChildren("proposal_material_items", "proposal_revision_id");
 
   await admin
     .from("proposals")

@@ -16,6 +16,10 @@ export function executedProposalHtml(data: any, signer: any) {
     `<tr><td>${escapeHtml(e.category)}</td><td>${escapeHtml(e.description ?? "")}</td><td>${escapeHtml(e.estimated_quantity)} ${escapeHtml(e.unit ?? "")}</td><td>${money(e.estimated_rate)}</td><td>${money(e.estimated_amount)}</td></tr>`
   ).join("");
 
+  const materials = (data.materials ?? []).map((material:any) =>
+    `<tr><td>${escapeHtml(material.description)}</td><td>${escapeHtml(material.quantity)} ${escapeHtml(material.unit)}</td><td>${money(material.unit_price)}</td><td>${money(material.amount)}</td></tr>`
+  ).join("");
+
   return `<!doctype html><html><head><meta charset="utf-8"><style>
     body{font-family:Arial,sans-serif;color:#222;font-size:11pt;line-height:1.45}
     header{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;border-bottom:2px solid #222;padding-bottom:12px;margin-bottom:20px}
@@ -30,8 +34,10 @@ export function executedProposalHtml(data: any, signer: any) {
     <p>Client: ${escapeHtml(data.proposal.client?.company_name ?? "")}</p>
     ${sections}
     <h2>Professional Fees</h2><table><thead><tr><td>Description</td><td>Hours</td><td>Rate</td><td>Amount</td></tr></thead><tbody>${fees}</tbody></table>
+    ${materials ? `<h2>Materials</h2><table><thead><tr><td>Description</td><td>Quantity</td><td>Bid Unit Price</td><td>Amount</td></tr></thead><tbody>${materials}</tbody></table>` : ""}
     <h2>Estimated Expenses</h2><table><thead><tr><td>Category</td><td>Description</td><td>Quantity</td><td>Unit Cost</td><td>Estimate</td></tr></thead><tbody>${expenses}</tbody></table>
     <p><strong>Professional Fee:</strong> ${money(data.revision.professional_fee)}<br>
+    <strong>Estimated Materials:</strong> ${money(data.revision.estimated_materials)}<br>
     <strong>Estimated Expenses:</strong> ${money(data.revision.estimated_expenses)}<br>
     <strong>Estimated Total:</strong> ${money(data.revision.estimated_total)}<br>
     <strong>Terms:</strong> ${escapeHtml(data.revision.payment_terms ?? "")}</p>

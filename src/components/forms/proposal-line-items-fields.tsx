@@ -4,6 +4,8 @@ import { useId, useMemo, useRef, useState } from "react";
 import {
   calculateExpenseAmount,
   calculateLaborAmount,
+  calculateMaterialAmount,
+  calculateMaterialUnitPrice,
   EXPENSE_BILLING_RULES,
   type ExpenseBillingRule,
 } from "@/lib/proposal-items";
@@ -27,6 +29,15 @@ export type ExpenseLineValue = {
   requiresReceipt: boolean;
 };
 
+export type MaterialLineValue = {
+  id: string;
+  description: string;
+  quantity: string;
+  unit: string;
+  unitCost: string;
+  markupPercent: string;
+};
+
 const expenseRuleLabels: Record<ExpenseBillingRule, string> = {
   actual: "Actual cost",
   actual_plus_markup: "Actual + markup",
@@ -40,6 +51,7 @@ const expenseRuleLabels: Record<ExpenseBillingRule, string> = {
 
 const EMPTY_LABOR_LINES: LaborLineValue[] = [];
 const EMPTY_EXPENSE_LINES: ExpenseLineValue[] = [];
+const EMPTY_MATERIAL_LINES: MaterialLineValue[] = [];
 
 function numericValue(value: string): number {
   const number = Number(value);
@@ -68,13 +80,26 @@ function blankExpenseLine(id: string): ExpenseLineValue {
   };
 }
 
+function blankMaterialLine(id: string): MaterialLineValue {
+  return {
+    id,
+    description: "",
+    quantity: "1",
+    unit: "each",
+    unitCost: "",
+    markupPercent: "0",
+  };
+}
+
 export function ProposalLineItemsFields({
   initialLaborLines = EMPTY_LABOR_LINES,
   initialExpenseLines = EMPTY_EXPENSE_LINES,
+  initialMaterialLines = EMPTY_MATERIAL_LINES,
   totalLabel = "Estimated Proposal Total",
 }: {
   initialLaborLines?: LaborLineValue[];
   initialExpenseLines?: ExpenseLineValue[];
+  initialMaterialLines?: MaterialLineValue[];
   totalLabel?: string;
 }) {
   const headingPrefix = useId();
@@ -84,6 +109,9 @@ export function ProposalLineItemsFields({
   );
   const [expenseLines, setExpenseLines] = useState<ExpenseLineValue[]>(() =>
     initialExpenseLines.length ? initialExpenseLines : [blankExpenseLine("expense-initial")],
+  );
+  const [materialLines, setMaterialLines] = useState<MaterialLineValue[]>(() =>
+    initialMaterialLines.length ? initialMaterialLines : [blankMaterialLine("material-initial")],
   );
 
   const laborTotal = useMemo(
@@ -105,12 +133,26 @@ export function ProposalLineItemsFields({
     ),
     [expenseLines],
   );
+  const materialTotal = useMemo(
+    () => materialLines.reduce(
+      (sum, line) => sum + calculateMaterialAmount(
+        numericValue(line.quantity),
+        numericValue(line.unitCost),
+        numericValue(line.markupPercent),
+      ),
+      0,
+    ),
+    [materialLines],
+  );
 
   const updateLaborLine = (id: string, patch: Partial<LaborLineValue>) => {
     setLaborLines((lines) => lines.map((line) => line.id === id ? { ...line, ...patch } : line));
   };
   const updateExpenseLine = (id: string, patch: Partial<ExpenseLineValue>) => {
     setExpenseLines((lines) => lines.map((line) => line.id === id ? { ...line, ...patch } : line));
+  };
+  const updateMaterialLine = (id: string, patch: Partial<MaterialLineValue>) => {
+    setMaterialLines((lines) => lines.map((line) => line.id === id ? { ...line, ...patch } : line));
   };
 
   return (
@@ -190,6 +232,125 @@ export function ProposalLineItemsFields({
           })}
         </div>
         <div className="line-items-subtotal"><span>Professional Fee</span><strong>{currency(laborTotal)}</strong></div>
+      </section>
+
+      <section className="full line-items-section" aria-labelledby={`${headingPrefix}-materials`}>
+        <div className="line-items-heading">
+          <div>
+            <h2 id={`${headingPrefix}-materials`}>Materials</h2>
+            <p>List materials purchased for the work. Markup is optional and defaults to 0%.</p>
+          </div>
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={() => setMaterialLines((lines) => [
+              ...lines,
+              blankMaterialLine(`material-new-${nextId.current++}`),
+            ])}
+          >
+            Add Material Line
+          </button>
+        </div>
+        <input type="hidden" name="material_count" value={materialLines.length} />
+        <div className="line-items-list">
+          {materialLines.map((line, index) => {
+            const unitPrice = calculateMaterialUnitPrice(
+              numericValue(line.unitCost),
+              numericValue(line.markupPercent),
+            );
+            const amount = calculateMaterialAmount(
+              numericValue(line.quantity),
+              numericValue(line.unitCost),
+              numericValue(line.markupPercent),
+            );
+            const materialLineStarted = Boolean(
+              line.description.trim()
+              || line.unitCost
+              || (line.quantity && line.quantity !== "1")
+              || (line.markupPercent && line.markupPercent !== "0"),
+            );
+            return (
+              <div className="line-item material-line" key={line.id}>
+                <label className="material-description">
+                  Material
+                  <input
+                    name={`material_description_${index}`}
+                    value={line.description}
+                    required={materialLineStarted}
+                    onChange={(event) => updateMaterialLine(line.id, { description: event.target.value })}
+                    placeholder="Equipment, supplies, or purchased component"
+                  />
+                </label>
+                <label>
+                  Quantity
+                  <input
+                    name={`material_quantity_${index}`}
+                    type="number"
+                    min="0"
+                    step="0.001"
+                    value={line.quantity}
+                    required={materialLineStarted}
+                    onChange={(event) => updateMaterialLine(line.id, { quantity: event.target.value })}
+                  />
+                </label>
+                <label>
+                  Unit
+                  <input
+                    name={`material_unit_${index}`}
+                    value={line.unit}
+                    required={materialLineStarted}
+                    onChange={(event) => updateMaterialLine(line.id, { unit: event.target.value })}
+                    placeholder="each, box, lot"
+                  />
+                </label>
+                <label>
+                  Unit Cost
+                  <input
+                    name={`material_unit_cost_${index}`}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={line.unitCost}
+                    required={materialLineStarted}
+                    onChange={(event) => updateMaterialLine(line.id, { unitCost: event.target.value })}
+                    placeholder="$0.00"
+                  />
+                </label>
+                <label>
+                  Markup %
+                  <input
+                    name={`material_markup_${index}`}
+                    type="number"
+                    min="0"
+                    max="999.999"
+                    step="0.001"
+                    value={line.markupPercent}
+                    required={materialLineStarted}
+                    onChange={(event) => updateMaterialLine(line.id, { markupPercent: event.target.value })}
+                  />
+                </label>
+                <div className="line-item-amount">
+                  <span>Bid Unit Price</span>
+                  <strong>{currency(unitPrice)}</strong>
+                </div>
+                <div className="line-item-amount">
+                  <span>Material Total</span>
+                  <strong>{currency(amount)}</strong>
+                </div>
+                <button
+                  className="text-button remove-line"
+                  type="button"
+                  onClick={() => setMaterialLines((lines) => lines.filter((candidate) => candidate.id !== line.id))}
+                  disabled={materialLines.length === 1}
+                  aria-label={`Remove material line ${index + 1}`}
+                >
+                  Remove
+                </button>
+              </div>
+            );
+          })}
+        </div>
+        <div className="line-items-subtotal"><span>Estimated Materials</span><strong>{currency(materialTotal)}</strong></div>
       </section>
 
       <section className="full line-items-section" aria-labelledby={`${headingPrefix}-expenses`}>
@@ -321,7 +482,7 @@ export function ProposalLineItemsFields({
 
       <div className="full proposal-estimate-total">
         <span>{totalLabel}</span>
-        <strong>{currency(laborTotal + expenseTotal)}</strong>
+        <strong>{currency(laborTotal + materialTotal + expenseTotal)}</strong>
       </div>
     </>
   );

@@ -35,7 +35,7 @@ export async function createInvoiceAction(formData: FormData) {
     throw new Error("Advance percentage cannot exceed 100.");
   }
   if (invoiceType === "progress" && !includeTime && !includeExpenses) {
-    throw new Error("Choose unbilled time, unbilled expenses, or both.");
+    throw new Error("Choose unbilled time, unbilled expenses and materials, or both.");
   }
 
   const { data: project, error: projectError } = await admin

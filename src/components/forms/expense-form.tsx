@@ -52,11 +52,11 @@ export function ExpenseForm({
       {returnTo ? <input type="hidden" name="return_to" value={returnTo} /> : null}
       <label>Date<input name="expense_date" type="date" defaultValue={expenseDate} required /></label>
       {hasApprovedCategories ? <>
-        <label>Approved Expense Category
+        <label>Approved Expense or Material
           <select name="approved_expense_source" value={sourceKey} required onChange={(event) => setSourceKey(event.target.value)}>
             {activeProject?.expense_categories.map((item) => <option key={`${item.source_kind}:${item.id}`} value={`${item.source_kind}:${item.id}`}>{item.source_label} — {item.category}</option>)}
           </select>
-          <span>From the accepted proposal or an accepted Additional Service.</span>
+          <span>From the accepted proposal materials, proposal expenses, or an accepted Additional Service.</span>
         </label>
         <div className="project-context"><span>Billing Rule</span><strong>{selectedEstimate ? readableRule(selectedEstimate.billing_rule) : "—"}</strong><small>{selectedEstimate?.requires_receipt ? "Receipt required" : "Receipt optional"}</small></div>
       </> : <>

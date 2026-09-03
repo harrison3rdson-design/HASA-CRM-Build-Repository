@@ -16,6 +16,37 @@ async function approvedExpenseSnapshot(supabase: any, projectId: string, formDat
   const [sourceKind, sourceId] = encodedSource?.split(":", 2) ?? (legacySource ? ["proposal", legacySource] : []);
   if (!sourceId) return null;
 
+  if (sourceKind === "material") {
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("source_revision_id")
+      .eq("id", projectId)
+      .single();
+    if (projectError) throw projectError;
+    if (!project.source_revision_id) throw new Error("This project does not have an accepted proposal revision.");
+
+    const { data: material, error: materialError } = await supabase
+      .from("proposal_material_items")
+      .select("id,description,unit_cost,amount,markup_percent")
+      .eq("id", sourceId)
+      .eq("proposal_revision_id", project.source_revision_id)
+      .maybeSingle();
+    if (materialError) throw materialError;
+    if (!material) throw new Error("The selected material is not part of this project's accepted proposal.");
+
+    return {
+      category: "Materials",
+      description: material.description,
+      billing_rule: Number(material.markup_percent) > 0 ? "actual_plus_markup" : "actual",
+      markup_percent: material.markup_percent,
+      estimated_rate: material.unit_cost,
+      estimated_amount: material.amount,
+      source_estimate_id: null,
+      source_material_id: material.id,
+      source_additional_service_expense_item_id: null,
+    };
+  }
+
   if (sourceKind === "additional_service") {
     const { data: item, error: itemError } = await supabase
       .from("additional_service_expense_items")
@@ -38,6 +69,7 @@ async function approvedExpenseSnapshot(supabase: any, projectId: string, formDat
     return {
       ...item,
       source_estimate_id: null,
+      source_material_id: null,
       source_additional_service_expense_item_id: item.id,
     };
   }
@@ -63,6 +95,7 @@ async function approvedExpenseSnapshot(supabase: any, projectId: string, formDat
   return {
     ...estimate,
     source_estimate_id: estimate.id,
+    source_material_id: null,
     source_additional_service_expense_item_id: null,
   };
 }
@@ -95,10 +128,11 @@ export async function createExpenseAction(formData: FormData) {
     .insert({
       project_id: projectId,
       source_estimate_id: estimate?.source_estimate_id ?? null,
+      source_material_id: estimate?.source_material_id ?? null,
       source_additional_service_expense_item_id: estimate?.source_additional_service_expense_item_id ?? null,
       expense_date: requiredText(formData.get("expense_date"), "Expense date"),
       category: estimate?.category ?? requiredText(formData.get("category"), "Category"),
-      description: optionalText(formData.get("description")),
+      description: optionalText(formData.get("description")) ?? estimate?.description ?? null,
       vendor: optionalText(formData.get("vendor")),
       actual_cost: actualCost,
       billable,

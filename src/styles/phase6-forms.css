@@ -27,8 +27,9 @@
 .labor-line{grid-template-columns:minmax(220px,2fr) minmax(90px,.65fr) minmax(110px,.8fr) minmax(110px,.7fr)}
 .scope-line{grid-template-columns:minmax(160px,.65fr) minmax(220px,1fr)}
 .scope-content{grid-column:1/-1}
-.expense-line{grid-template-columns:repeat(4,minmax(100px,1fr))}
+.expense-line,.material-line{grid-template-columns:repeat(4,minmax(100px,1fr))}
 .expense-description{grid-column:span 2}
+.material-description{grid-column:span 2}
 .line-item-amount{display:grid;align-content:center;gap:5px;padding-top:18px;text-align:right}
 .line-item-amount span{font-size:11px;color:var(--muted)}
 .line-item-amount strong{font-size:14px;color:var(--text)}
@@ -38,5 +39,5 @@
 .line-items-subtotal span{color:var(--muted)}
 .proposal-estimate-total{display:flex;justify-content:flex-end;align-items:baseline;gap:30px;padding:15px 4px;border-top:2px solid var(--text);font-size:15px;color:var(--text)}
 .proposal-estimate-total strong{font-size:20px}
-@media(max-width:980px){.labor-line,.expense-line{grid-template-columns:repeat(2,minmax(0,1fr))}.expense-description{grid-column:auto}.line-item-amount{text-align:left}}
-@media(max-width:760px){.form-grid{grid-template-columns:1fr}.form-grid .full{grid-column:auto}.billing-workflow-fields{grid-template-columns:1fr}.line-items-heading{display:grid}.line-items-heading button{justify-self:start}.scope-line,.labor-line,.expense-line{grid-template-columns:1fr}.scope-content{grid-column:auto}.line-item{padding-right:14px;padding-top:42px}.remove-line{top:12px}.proposal-estimate-total,.line-items-subtotal{justify-content:space-between}}
+@media(max-width:980px){.labor-line,.expense-line,.material-line{grid-template-columns:repeat(2,minmax(0,1fr))}.expense-description,.material-description{grid-column:auto}.line-item-amount{text-align:left}}
+@media(max-width:760px){.form-grid{grid-template-columns:1fr}.form-grid .full{grid-column:auto}.billing-workflow-fields{grid-template-columns:1fr}.line-items-heading{display:grid}.line-items-heading button{justify-self:start}.scope-line,.labor-line,.expense-line,.material-line{grid-template-columns:1fr}.scope-content{grid-column:auto}.line-item{padding-right:14px;padding-top:42px}.remove-line{top:12px}.proposal-estimate-total,.line-items-subtotal{justify-content:space-between}}

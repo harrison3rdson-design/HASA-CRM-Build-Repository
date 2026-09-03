@@ -63,12 +63,14 @@ export async function getProposalDetail(proposalId: string) {
     { data: sections },
     { data: fees },
     { data: expenses },
+    { data: materials },
     { data: acceptances },
     { data: deliveries, error: deliveriesError },
   ] = await Promise.all([
     revisionIds.length ? s.from("proposal_sections").select("*").in("proposal_revision_id", revisionIds).order("sort_order") : Promise.resolve({ data: [] } as any),
     revisionIds.length ? s.from("proposal_fee_items").select("*").in("proposal_revision_id", revisionIds).order("sort_order") : Promise.resolve({ data: [] } as any),
     revisionIds.length ? s.from("proposal_expense_estimates").select("*").in("proposal_revision_id", revisionIds).order("sort_order") : Promise.resolve({ data: [] } as any),
+    revisionIds.length ? s.from("proposal_material_items").select("*").in("proposal_revision_id", revisionIds).order("sort_order") : Promise.resolve({ data: [] } as any),
     revisionIds.length ? s.from("proposal_acceptances").select(`
       *,
       recorded_by_user:app_users(first_name,last_name,email),
@@ -90,6 +92,7 @@ export async function getProposalDetail(proposalId: string) {
     sections: sections ?? [],
     fees: fees ?? [],
     expenses: expenses ?? [],
+    materials: materials ?? [],
     acceptances: acceptances ?? [],
     deliveries: deliveries ?? [],
   };

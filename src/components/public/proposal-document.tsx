@@ -8,6 +8,7 @@ type ProposalDocumentProps = {
     revision_number: number | string;
     professional_fee: number | string | null;
     estimated_expenses: number | string | null;
+    estimated_materials: number | string | null;
     estimated_total: number | string | null;
     payment_terms: string;
     validity_days: number | string;
@@ -41,6 +42,14 @@ type ProposalDocumentProps = {
     markup_percent: number | string | null;
     estimated_amount: number | string | null;
   }>;
+  materials: Array<{
+    id: string;
+    description: string;
+    quantity: number | string | null;
+    unit: string;
+    unit_price: number | string | null;
+    amount: number | string | null;
+  }>;
   company: {
     display_name: string;
     legal_name: string;
@@ -59,6 +68,7 @@ export function ProposalDocument({
   sections,
   fees,
   expenses,
+  materials,
   company,
 }: ProposalDocumentProps) {
   return (
@@ -107,6 +117,21 @@ export function ProposalDocument({
           </div>
         </section>
 
+        {materials.length ? <section>
+          <h2>Materials</h2>
+          <div className="public-table">
+            {materials.map((material) => (
+              <div key={material.id}>
+                <span>
+                  {material.description}
+                  <small>{quantityLabel(material.quantity, material.unit)} × {money(material.unit_price)}</small>
+                </span>
+                <strong>{money(material.amount)}</strong>
+              </div>
+            ))}
+          </div>
+        </section> : null}
+
         <section>
           <h2>Estimated Expenses</h2>
           <div className="public-table">
@@ -127,6 +152,7 @@ export function ProposalDocument({
 
         <div className="public-totals">
           <div><span>Professional Fee</span><strong>{money(revision.professional_fee)}</strong></div>
+          <div><span>Estimated Materials</span><strong>{money(revision.estimated_materials)}</strong></div>
           <div><span>Estimated Expenses</span><strong>{money(revision.estimated_expenses)}</strong></div>
           <div><span>Estimated Total</span><strong>{money(revision.estimated_total)}</strong></div>
         </div>

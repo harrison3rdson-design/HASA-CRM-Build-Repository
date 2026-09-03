@@ -10,7 +10,7 @@ export default async function PublicProposalPage({
 }) {
   const { token } = await params;
   const data = await getPublicProposalByToken(token);
-  const { revision, proposal, sections, fees, expenses, company } = data;
+  const { revision, proposal, sections, fees, expenses, materials, company } = data;
 
   return (
     <main className="public-shell">
@@ -20,6 +20,7 @@ export default async function PublicProposalPage({
         sections={sections}
         fees={fees}
         expenses={expenses}
+        materials={materials}
         company={company}
       />
 

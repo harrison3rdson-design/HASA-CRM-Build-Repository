@@ -19,6 +19,18 @@ export function calculateLaborAmount(hours: number, hourlyRate: number): number 
   return roundMoney(hours * hourlyRate);
 }
 
+export function calculateMaterialUnitPrice(unitCost: number, markupPercent: number): number {
+  return roundMoney(unitCost * (1 + markupPercent / 100));
+}
+
+export function calculateMaterialAmount(
+  quantity: number,
+  unitCost: number,
+  markupPercent: number,
+): number {
+  return roundMoney(quantity * calculateMaterialUnitPrice(unitCost, markupPercent));
+}
+
 export function calculateExpenseAmount(
   quantity: number,
   rate: number,

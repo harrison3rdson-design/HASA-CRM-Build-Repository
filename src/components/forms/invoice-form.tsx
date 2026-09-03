@@ -91,7 +91,7 @@ export function InvoiceForm({
       {selectedProject ? <div className="project-context full">
         <span>Approved Billing Basis</span>
         <strong>{selectedProject.billing_method.replaceAll("_", " ")} · {money.format(selectedProject.service_fee_authorized)} authorized services</strong>
-        <small>{money.format(selectedProject.authorized_fee - selectedProject.service_fee_authorized)} of authorized reimbursable expenses is tracked separately.</small>
+        <small>Authorized materials and reimbursable expenses are tracked separately from the service fee.</small>
       </div> : null}
       <label className="full">Customer Notes<textarea name="customer_notes" rows={3} /></label>
       {invoiceType === "advance" ? <fieldset className="billing-workflow full">
@@ -123,13 +123,13 @@ export function InvoiceForm({
         <legend>Progress billing</legend>
         <p>Choose which completed, unbilled project activity to include. Each included entry is reserved so it cannot be billed twice.</p>
         <label className="check"><input name="include_time" type="checkbox" defaultChecked /> Include unbilled time</label>
-        <label className="check"><input name="include_expenses" type="checkbox" defaultChecked /> Include unbilled expenses</label>
+        <label className="check"><input name="include_expenses" type="checkbox" defaultChecked /> Include unbilled expenses and materials</label>
       </fieldset> : null}
       {invoiceType === "final" ? <div className="billing-workflow full" role="note">
         <strong>Final project closeout</strong>
         <p>{selectedProject?.billing_method === "fixed_fee" || selectedProject?.billing_method === "milestone"
-          ? "Bills the remaining authorized service balance, includes all remaining billable expenses, and records unbilled time as included fixed-fee detail. Prior non-void invoices are deducted automatically."
-          : "Bills all remaining unbilled time and expenses. Prior non-void invoices remain visible in the reconciliation."}</p>
+          ? "Bills the remaining authorized service balance, includes all remaining billable expenses and materials, and records unbilled time as included fixed-fee detail. Prior non-void invoices are deducted automatically."
+          : "Bills all remaining unbilled time, expenses, and materials. Prior non-void invoices remain visible in the reconciliation."}</p>
       </div> : null}
       <label className="check"><input name="include_expense_detail" type="checkbox" /> Include Expense Detail</label>
       <label className="check"><input name="include_receipt_appendix" type="checkbox" /> Include Receipt Appendix</label>

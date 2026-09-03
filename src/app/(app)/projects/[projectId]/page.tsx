@@ -6,12 +6,13 @@ import { AdditionalServiceForm } from "@/components/forms/additional-service-for
 import { getProjectDetail } from "@/lib/data/detail-data";
 import { dateTime, money, hours } from "@/lib/ui/format";
 
-function approvedSource(row: any, relationName: string, originalSourceId: string) {
+function approvedSource(row: any, relationName: string, originalSourceId: string, materialSourceId?: string) {
   const relation = Array.isArray(row[relationName]) ? row[relationName][0] : row[relationName];
   const authorization = Array.isArray(relation?.additional_service)
     ? relation.additional_service[0]
     : relation?.additional_service;
-  return authorization?.authorization_number ?? (row[originalSourceId] ? "Original Proposal" : "Manual");
+  return authorization?.authorization_number
+    ?? (materialSourceId && row[materialSourceId] ? "Original Proposal Materials" : row[originalSourceId] ? "Original Proposal" : "Manual");
 }
 
 export default async function ProjectDetailPage({
@@ -28,7 +29,7 @@ export default async function ProjectDetailPage({
         <div><h1>{d.project.project_number}</h1><p>{d.project.project_name}</p></div>
         <div className="button-row">
           <Link className="secondary-button" href={`/time?projectId=${projectId}#add-time`}>Add Time</Link>
-          <Link className="secondary-button" href={`/expenses?projectId=${projectId}#add-expense`}>Add Expense</Link>
+          <Link className="secondary-button" href={`/expenses?projectId=${projectId}#add-expense`}>Add Expense or Material</Link>
           <Link className="primary-button" href={`/billing/new?projectId=${projectId}`}>Create Invoice</Link>
         </div>
       </div>
@@ -58,9 +59,9 @@ export default async function ProjectDetailPage({
         <tbody>{d.time.map((t:any)=><tr key={t.id}><td>{t.work_date}</td><td>{approvedSource(t, "source_additional_service_labor_item", "source_fee_item_id")}</td><td>{t.activity_type}</td><td>{t.description??"—"}</td><td>{hours(t.hours)}</td><td>{t.billable?"Yes":"No"}</td><td>{!t.locked && !t.invoice_item_id ? <DeleteTimeEntryButton timeEntryId={t.id} workDate={t.work_date} entryHours={Number(t.hours)} /> : <span className="muted">Locked</span>}</td></tr>)}</tbody></table></div>
       </Panel>
 
-      <Panel title="Recent Expenses">
+      <Panel title="Recent Expenses and Materials">
         <div className="table-wrap"><table><thead><tr><th>Date</th><th>Approved Source</th><th>Category</th><th>Vendor</th><th>Actual</th><th>Billable</th></tr></thead>
-        <tbody>{d.expenses.map((e:any)=><tr key={e.id}><td>{e.expense_date}</td><td>{approvedSource(e, "source_additional_service_expense_item", "source_estimate_id")}</td><td>{e.category}</td><td>{e.vendor??"—"}</td><td>{money(e.actual_cost)}</td><td>{money(e.billable_amount)}</td></tr>)}</tbody></table></div>
+        <tbody>{d.expenses.map((e:any)=><tr key={e.id}><td>{e.expense_date}</td><td>{approvedSource(e, "source_additional_service_expense_item", "source_estimate_id", "source_material_id")}</td><td>{e.category}</td><td>{e.vendor??"—"}</td><td>{money(e.actual_cost)}</td><td>{money(e.billable_amount)}</td></tr>)}</tbody></table></div>
       </Panel>
 
       <Panel title="Additional Services">

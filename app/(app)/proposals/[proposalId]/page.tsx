@@ -52,6 +52,18 @@ type ExpenseRecord = {
   requires_receipt: boolean;
 };
 
+type MaterialRecord = {
+  id: string;
+  proposal_revision_id: string;
+  description: string;
+  quantity: number | string;
+  unit: string;
+  unit_cost: number | string;
+  markup_percent: number | string;
+  unit_price: number | string;
+  amount: number | string;
+};
+
 type AcceptanceRecord = {
   id: string;
   proposal_revision_id: string;
@@ -145,6 +157,16 @@ export default async function ProposalDetailPage({
       markupPercent: String(expense.markup_percent ?? "0"),
       requiresReceipt: Boolean(expense.requires_receipt),
     })) : [];
+  const materialLines = latest ? (d.materials as MaterialRecord[])
+    .filter((material) => material.proposal_revision_id === latest.id)
+    .map((material) => ({
+      id: material.id,
+      description: material.description,
+      quantity: String(material.quantity ?? "1"),
+      unit: material.unit,
+      unitCost: String(material.unit_cost ?? ""),
+      markupPercent: String(material.markup_percent ?? "0"),
+    })) : [];
   const acceptances = d.acceptances as AcceptanceRecord[];
   const acceptanceByRevision = new Map(
     acceptances.map((acceptance) => [acceptance.proposal_revision_id, acceptance]),
@@ -174,7 +196,7 @@ export default async function ProposalDetailPage({
             <h2 id="proposal-work-area-title">Build and manage {latestLabel}</h2>
             <p>{latest?.locked
               ? "This proposal version is locked because it has been sent. Create a revision to make changes."
-              : "Contact, scope, hours, rates, expenses, and terms remain editable here until this version is sent."}</p>
+              : "Contact, scope, hours, rates, materials, expenses, and terms remain editable here until this version is sent."}</p>
           </div>
           <div className="button-row proposal-area-actions">
           {latest && !latest.locked && !showEditor ? (
@@ -247,6 +269,7 @@ export default async function ProposalDetailPage({
               scopeSections={scopeSections}
               laborLines={laborLines}
               expenseLines={expenseLines}
+              materialLines={materialLines}
             />
           </Panel>
         ) : null}
@@ -290,7 +313,7 @@ export default async function ProposalDetailPage({
           <div>
             <span className="proposal-area-eyebrow">Proposal Summary</span>
             <h2 id="proposal-summary-area-title">Review the current customer-facing content</h2>
-            <p>Use this read-only area to confirm totals, scope, fees, expenses, terms, and revision history.</p>
+            <p>Use this read-only area to confirm totals, scope, fees, materials, expenses, terms, and revision history.</p>
           </div>
           <span className="proposal-area-badge">Read-only review</span>
         </header>
@@ -298,8 +321,8 @@ export default async function ProposalDetailPage({
         {latest ? <ProposalSummary revision={latest} /> : null}
 
         <Panel title="Proposal Version History">
-          <div className="table-wrap"><table><thead><tr><th>Version</th><th>Date</th><th>Fee</th><th>Expenses</th><th>Total</th><th>Terms</th><th>Locked</th><th>Approved By</th><th>Approval Date</th></tr></thead>
-          <tbody>{d.revisions.map((r:any)=>{const acceptance=acceptanceByRevision.get(r.id);return <tr key={r.id}><td>{proposalRevisionLabel(r.revision_number)}</td><td>{r.revision_date}</td><td>{money(r.professional_fee)}</td><td>{money(r.estimated_expenses)}</td><td>{money(r.estimated_total)}</td><td>{r.payment_terms}</td><td>{r.locked?"Yes":"No"}</td><td>{acceptance?.signer_name??"—"}</td><td>{dateTime(acceptance?.accepted_at)}</td></tr>})}</tbody></table></div>
+          <div className="table-wrap"><table><thead><tr><th>Version</th><th>Date</th><th>Fee</th><th>Materials</th><th>Expenses</th><th>Total</th><th>Terms</th><th>Locked</th><th>Approved By</th><th>Approval Date</th></tr></thead>
+          <tbody>{d.revisions.map((r:any)=>{const acceptance=acceptanceByRevision.get(r.id);return <tr key={r.id}><td>{proposalRevisionLabel(r.revision_number)}</td><td>{r.revision_date}</td><td>{money(r.professional_fee)}</td><td>{money(r.estimated_materials)}</td><td>{money(r.estimated_expenses)}</td><td>{money(r.estimated_total)}</td><td>{r.payment_terms}</td><td>{r.locked?"Yes":"No"}</td><td>{acceptance?.signer_name??"—"}</td><td>{dateTime(acceptance?.accepted_at)}</td></tr>})}</tbody></table></div>
         </Panel>
 
         {acceptances.length ? (
@@ -325,6 +348,11 @@ export default async function ProposalDetailPage({
           <Panel title="Professional Fees">
             <div className="table-wrap"><table><thead><tr><th>Description</th><th>Hours</th><th>Hourly Rate</th><th>Amount</th></tr></thead>
             <tbody>{d.fees.filter((f:any)=>f.proposal_revision_id===latest.id).map((f:any)=><tr key={f.id}><td>{f.description}</td><td>{Number(f.quantity)}</td><td>{money(f.rate)}</td><td>{money(f.amount)}</td></tr>)}</tbody></table></div>
+          </Panel>
+
+          <Panel title="Materials">
+            <div className="table-wrap"><table><thead><tr><th>Material</th><th>Qty</th><th>Unit</th><th>Unit Cost</th><th>Markup</th><th>Bid Unit Price</th><th>Amount</th></tr></thead>
+            <tbody>{d.materials.filter((m:any)=>m.proposal_revision_id===latest.id).map((m:any)=><tr key={m.id}><td>{m.description}</td><td>{Number(m.quantity)}</td><td>{m.unit}</td><td>{money(m.unit_cost)}</td><td>{Number(m.markup_percent)}%</td><td>{money(m.unit_price)}</td><td>{money(m.amount)}</td></tr>)}</tbody></table></div>
           </Panel>
 
           <Panel title="Estimated Expenses">

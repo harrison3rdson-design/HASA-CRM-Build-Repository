@@ -78,6 +78,7 @@ export async function createProposalRevisionAction(proposalId: string) {
       revision_number: nextRevision,
       professional_fee: current.professional_fee,
       estimated_expenses: current.estimated_expenses,
+      estimated_materials: current.estimated_materials,
       billing_method: current.billing_method,
       payment_terms: current.payment_terms,
       validity_days: current.validity_days,
@@ -105,6 +106,7 @@ export async function createProposalRevisionAction(proposalId: string) {
   await copyChildren("proposal_sections", "proposal_revision_id");
   await copyChildren("proposal_fee_items", "proposal_revision_id");
   await copyChildren("proposal_expense_estimates", "proposal_revision_id");
+  await copyChildren("proposal_material_items", "proposal_revision_id");
 
   await admin
     .from("proposals")

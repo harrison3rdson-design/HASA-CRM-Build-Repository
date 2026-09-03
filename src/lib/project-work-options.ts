@@ -10,7 +10,7 @@ export type ApprovedLaborCategory = {
 
 export type ApprovedExpenseCategory = {
   id: string;
-  source_kind: "proposal" | "additional_service";
+  source_kind: "proposal" | "material" | "additional_service";
   source_label: string;
   category: string;
   description: string | null;

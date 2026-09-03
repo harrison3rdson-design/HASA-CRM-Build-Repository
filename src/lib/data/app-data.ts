@@ -33,7 +33,7 @@ export const getClients=()=>q("clients","id,client_number,company_name,email,pho
 export const getProposals=()=>q("proposals","id,proposal_number,project_name,status,current_revision,client:clients(company_name)","created_at");
 export const getProjects=()=>q("project_financial_summary","*","project_number");
 export const getTimeEntries=()=>q("time_entries","id,work_date,activity_type,description,hours,billable,billing_rate,is_travel_time,locked,invoice_item_id,source_fee_item_id,source_additional_service_labor_item:additional_service_labor_items(additional_service:additional_services(authorization_number)),project:projects(project_number,project_name)","work_date");
-export const getExpenses=()=>q("expenses","id,expense_date,category,vendor,actual_cost,billable_amount,billing_rule,source_estimate_id,source_additional_service_expense_item:additional_service_expense_items(additional_service:additional_services(authorization_number)),project:projects(project_number,project_name)","expense_date");
+export const getExpenses=()=>q("expenses","id,expense_date,category,vendor,actual_cost,billable_amount,billing_rule,source_estimate_id,source_material_id,source_additional_service_expense_item:additional_service_expense_items(additional_service:additional_services(authorization_number)),project:projects(project_number,project_name)","expense_date");
 export const getReceiptInbox=()=>q("receipt_inbox","id,original_filename,mime_type,captured_at,status,project_id,expense_id","captured_at");
 export const getInvoices=()=>q("invoices","id,invoice_number,invoice_date,due_date,status,total,amount_paid,balance_due,invoice_type,client:clients(company_name),project:projects(project_number,project_name)","invoice_date");
 export const getDocuments=()=>q("documents","id,title,document_type,document_subtype,document_date,locked,storage_path","created_at");
@@ -65,7 +65,7 @@ export async function getProjectWorkOptions(): Promise<ProjectWorkOption[]> {
   )];
 
   const projectIds = (projects ?? []).map((project) => project.id);
-  const [laborResult, expenseResult, authorizationResult] = await Promise.all([
+  const [laborResult, expenseResult, materialResult, authorizationResult] = await Promise.all([
     revisionIds.length
       ?
         s.from("proposal_fee_items")
@@ -80,6 +80,12 @@ export async function getProjectWorkOptions(): Promise<ProjectWorkOption[]> {
           .in("proposal_revision_id", revisionIds)
           .order("sort_order")
       : Promise.resolve({ data: [], error: null }),
+    revisionIds.length
+      ? s.from("proposal_material_items")
+          .select("id,proposal_revision_id,description,unit_cost,amount,markup_percent")
+          .in("proposal_revision_id", revisionIds)
+          .order("sort_order")
+      : Promise.resolve({ data: [], error: null }),
     projectIds.length
       ? s.from("additional_services")
           .select("id,project_id,authorization_number")
@@ -91,6 +97,7 @@ export async function getProjectWorkOptions(): Promise<ProjectWorkOption[]> {
 
   if (laborResult.error) throw laborResult.error;
   if (expenseResult.error) throw expenseResult.error;
+  if (materialResult.error) throw materialResult.error;
   if (authorizationResult.error) throw authorizationResult.error;
 
   const authorizationIds = (authorizationResult.data ?? []).map((authorization) => authorization.id);
@@ -141,6 +148,20 @@ export async function getProjectWorkOptions(): Promise<ProjectWorkOption[]> {
           ...item,
           source_kind: "proposal" as const,
           source_label: "Original Proposal",
+        })),
+      ...(materialResult.data ?? [])
+        .filter((item) => item.proposal_revision_id === project.source_revision_id)
+        .map(({ proposal_revision_id: _revisionId, unit_cost, amount, markup_percent, description, ...item }) => ({
+          ...item,
+          category: "Materials",
+          description,
+          estimated_rate: unit_cost,
+          estimated_amount: amount,
+          billing_rule: Number(markup_percent) > 0 ? "actual_plus_markup" : "actual",
+          markup_percent,
+          requires_receipt: true,
+          source_kind: "material" as const,
+          source_label: "Original Proposal Materials",
         })),
       ...(authorizationResult.data ?? []).flatMap((authorization) =>
         authorization.project_id === project.id

@@ -39,6 +39,7 @@ export interface ProposalRevision {
   revision_number: number;
   professional_fee: number;
   estimated_expenses: number;
+  estimated_materials: number;
   estimated_total: number;
   payment_terms: string;
   validity_days: number;

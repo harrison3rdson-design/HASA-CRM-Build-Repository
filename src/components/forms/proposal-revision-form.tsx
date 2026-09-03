@@ -6,6 +6,7 @@ import {
   ProposalLineItemsFields,
   type ExpenseLineValue,
   type LaborLineValue,
+  type MaterialLineValue,
 } from "@/components/forms/proposal-line-items-fields";
 import {
   ProposalScopeFields,
@@ -20,6 +21,7 @@ export function ProposalRevisionForm({
   scopeSections,
   laborLines,
   expenseLines,
+  materialLines,
 }: {
   proposalId: string;
   revision: {
@@ -32,6 +34,7 @@ export function ProposalRevisionForm({
   scopeSections: ScopeSectionValue[];
   laborLines: LaborLineValue[];
   expenseLines: ExpenseLineValue[];
+  materialLines: MaterialLineValue[];
 }) {
   const revisionLabel = proposalRevisionLabel(revision.revision_number);
 
@@ -67,6 +70,7 @@ export function ProposalRevisionForm({
       <ProposalLineItemsFields
         initialLaborLines={laborLines}
         initialExpenseLines={expenseLines}
+        initialMaterialLines={materialLines}
       />
 
       <div className="full button-row">

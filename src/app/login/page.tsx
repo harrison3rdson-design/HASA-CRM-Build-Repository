@@ -12,6 +12,7 @@ export default async function LoginPage({
   const { authUser, appUser } = await getCurrentAppUser();
   if (authUser && appUser?.active) redirect("/dashboard");
   const { error } = await searchParams;
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim();
 
   return (
     <main className="login-shell">
@@ -19,7 +20,7 @@ export default async function LoginPage({
         <div className="brand login-brand"><div className="brand-mark">HASA</div><div className="brand-sub">CONCEPTS</div></div>
         <h1>Management Sign In</h1>
         <p>Sign in with your HASA Concepts account to manage company settings and records.</p>
-        <LoginForm error={error} />
+        <LoginForm error={error} siteKey={siteKey} />
       </section>
     </main>
   );

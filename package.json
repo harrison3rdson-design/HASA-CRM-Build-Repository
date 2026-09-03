@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@marsidev/react-turnstile": "1.6.1",
     "@sparticuz/chromium-min": "149.0.0",
     "@supabase/ssr": "^0.6.0",
     "@supabase/supabase-js": "^2.0.0",
@@ -24,8 +25,8 @@
     "@sparticuz/chromium": "149.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "typescript": "^5.7.0",
-    "vitest": "^2.1.0",
-    "@types/react-dom": "^19.0.0"
+    "vitest": "^2.1.0"
   }
 }

@@ -15,6 +15,8 @@ describe("mandatory multi-factor authentication", () => {
     const server = read("src/lib/auth/server.ts");
 
     expect(action).toContain('redirect(isMfaVerified(mfaStatus) ? "/dashboard" : "/mfa")');
+    expect(action).toContain("const admin = createAdminClient()");
+    expect(action).toContain("await admin");
     expect(layout).toContain("getMfaStatus(supabase)");
     expect(layout).toContain('redirect("/mfa")');
     expect(server).toContain('redirect("/mfa")');

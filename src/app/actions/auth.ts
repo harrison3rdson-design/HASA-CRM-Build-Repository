@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { getMfaStatus, isMfaVerified } from "@/lib/auth/mfa";
 import { createAuthenticatedServerClient } from "@/lib/auth/server";
+import { createAdminClient } from "@/lib/supabase-admin";
 import { requiredText } from "@/lib/validation/common";
 
 export async function signInAction(formData: FormData) {
@@ -26,7 +27,8 @@ export async function signInAction(formData: FormData) {
     redirect("/login?error=" + encodeURIComponent(message));
   }
 
-  const { data: appUser, error: appUserError } = await supabase
+  const admin = createAdminClient();
+  const { data: appUser, error: appUserError } = await admin
     .from("app_users")
     .select("active")
     .eq("auth_user_id", data.user.id)

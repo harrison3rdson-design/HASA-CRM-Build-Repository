@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/forms/login-form";
+import { getMfaStatus, isMfaVerified } from "@/lib/auth/mfa";
 import { getCurrentAppUser } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
@@ -9,8 +10,11 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const { authUser, appUser } = await getCurrentAppUser();
-  if (authUser && appUser?.active) redirect("/dashboard");
+  const { supabase, authUser, appUser } = await getCurrentAppUser();
+  if (authUser && appUser?.active) {
+    const mfaStatus = await getMfaStatus(supabase);
+    redirect(isMfaVerified(mfaStatus) ? "/dashboard" : "/mfa");
+  }
   const { error } = await searchParams;
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim();
 

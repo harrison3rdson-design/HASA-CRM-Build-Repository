@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { getMfaStatus, isMfaVerified } from "@/lib/auth/mfa";
 import type { AppRole } from "@/lib/auth/roles";
+import { createAdminClient } from "@/lib/supabase-admin";
 
 export type ActiveAppUser = {
   id: string;
@@ -55,7 +57,8 @@ export async function getCurrentAppUser() {
     return { supabase, authUser: null, appUser: null };
   }
 
-  const { data, error } = await supabase
+  const admin = createAdminClient();
+  const { data, error } = await admin
     .from("app_users")
     .select("id,role,active,default_bill_rate,internal_cost_rate")
     .eq("auth_user_id", user.id)
@@ -78,6 +81,11 @@ export async function requireActiveUser() {
   }
   if (!appUser?.active) {
     throw new Error("Active application user required.");
+  }
+
+  const mfaStatus = await getMfaStatus(supabase);
+  if (!isMfaVerified(mfaStatus)) {
+    throw new Error("MFA verification required.");
   }
 
   return {

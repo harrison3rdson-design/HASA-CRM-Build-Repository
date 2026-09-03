@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { getMfaStatus, isMfaVerified } from "@/lib/auth/mfa";
 import { createAuthenticatedServerClient } from "@/lib/auth/server";
 import { requiredText } from "@/lib/validation/common";
 
@@ -36,7 +37,8 @@ export async function signInAction(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent("This account does not have active application access.")}`);
   }
 
-  redirect("/dashboard");
+  const mfaStatus = await getMfaStatus(supabase);
+  redirect(isMfaVerified(mfaStatus) ? "/dashboard" : "/mfa");
 }
 
 export async function signOutAction() {

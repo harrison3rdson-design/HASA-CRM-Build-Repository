@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signOutAction } from "@/app/actions/auth";
+import { getMfaStatus, isMfaVerified } from "@/lib/auth/mfa";
 import { getCurrentAppUser } from "@/lib/auth/server";
 import "@/styles/app.css";
 import "@/styles/phase6-forms.css";
@@ -15,8 +16,11 @@ const nav = [
 ];
 
 export default async function AppLayout({children}:{children:ReactNode}) {
-  const { authUser, appUser } = await getCurrentAppUser();
+  const { supabase, authUser, appUser } = await getCurrentAppUser();
   if (!authUser || !appUser?.active) redirect("/login");
+
+  const mfaStatus = await getMfaStatus(supabase);
+  if (!isMfaVerified(mfaStatus)) redirect("/mfa");
 
   return <div className="app-shell">
     <aside className="sidebar">

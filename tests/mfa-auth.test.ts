@@ -29,7 +29,7 @@ describe("mandatory multi-factor authentication", () => {
 
   it("requires an AAL2 JWT before database roles unlock business records", () => {
     const migration = read(
-      "supabase/migrations/20260903202635_enforce_mfa_aal2.sql",
+      "supabase/migrations/20260903212750_enforce_mfa_aal2.sql",
     );
 
     expect(migration).toContain("auth.jwt()->>'aal'");

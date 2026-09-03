@@ -13,6 +13,7 @@ export async function deliverPublicLink(input: {
   method: "sms" | "email" | "both";
   subject: string;
   message: string;
+  idempotencyKey?: string;
 }) {
   const admin = createAdminClient();
   const sms = new TwilioSmsProvider();
@@ -33,6 +34,7 @@ export async function deliverPublicLink(input: {
       subject: input.subject,
       text: `${input.message}\n\n${input.url}`,
       html: `<p>${input.message}</p><p><a href="${input.url}">Open document</a></p>`,
+      idempotencyKey: input.idempotencyKey,
     });
     results.push({ method: "email", address: input.email, ...r });
   }

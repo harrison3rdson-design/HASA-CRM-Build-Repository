@@ -149,7 +149,7 @@ export async function getInvoiceDetail(invoiceId: string) {
 
   const [{ data: invoice, error }, { data: items }, { data: payments }, { data: deliveries }] =
     await Promise.all([
-      s.from("invoices").select("*, client:clients(*), project:projects(*)").eq("id", invoiceId).single(),
+      s.from("invoices").select("*, client:clients(*), project:projects(*, primary_contact:contacts(id,first_name,last_name,email,mobile_phone))").eq("id", invoiceId).single(),
       s.from("invoice_items").select("*").eq("invoice_id", invoiceId).order("sort_order"),
       s.from("payments").select("*").eq("invoice_id", invoiceId).order("payment_date", { ascending: false }),
       s.from("document_deliveries").select("*").eq("document_type", "invoice").eq("related_record_id", invoiceId).order("created_at", { ascending: false }),

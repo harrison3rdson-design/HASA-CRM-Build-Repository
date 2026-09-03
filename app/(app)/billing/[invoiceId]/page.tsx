@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { Panel } from "@/components/cards";
 import { InvoiceSummary } from "@/components/billing/invoice-summary";
-import { IssueInvoiceButton } from "@/components/billing/issue-invoice-button";
 import { DeleteInvoiceButton } from "@/components/billing/delete-invoice-button";
+import { SendAndLockInvoiceForm } from "@/components/billing/send-and-lock-invoice-form";
 import { PaymentForm } from "@/components/forms/payment-form";
 import { getInvoiceDetail } from "@/lib/data/detail-data";
+import { isTransactionalEmailConfigured } from "@/lib/messaging/email";
+import { isTwilioConfigured } from "@/lib/messaging/twilio";
+import { normalizeRelatedContact } from "@/lib/proposal-contacts";
 import { money } from "@/lib/ui/format";
 
 export default async function InvoiceDetailPage({
@@ -14,6 +17,9 @@ export default async function InvoiceDetailPage({
 }) {
   const { invoiceId } = await params;
   const d = await getInvoiceDetail(invoiceId);
+  const primaryContact = normalizeRelatedContact(d.invoice.project?.primary_contact);
+  const canSendInvoice = !d.invoice.sent_at
+    && (d.invoice.status === "draft" || d.invoice.status === "issued");
   const canDeleteDraft = d.invoice.status === "draft"
     && !d.invoice.locked
     && !d.invoice.issued_at
@@ -41,11 +47,22 @@ export default async function InvoiceDetailPage({
               projectId={d.invoice.project_id}
             />
           ) : null}
-          {d.invoice.status === "draft" ? <IssueInvoiceButton invoiceId={invoiceId} /> : null}
         </div>
       </div>
 
       <InvoiceSummary invoice={d.invoice} />
+
+      {canSendInvoice ? (
+        <Panel title="Send Invoice">
+          <SendAndLockInvoiceForm
+            invoiceId={invoiceId}
+            hasEmail={Boolean(primaryContact?.email)}
+            hasMobile={Boolean(primaryContact?.mobile_phone)}
+            emailConfigured={isTransactionalEmailConfigured()}
+            smsConfigured={isTwilioConfigured()}
+          />
+        </Panel>
+      ) : null}
 
       <Panel title="Line Items">
         {d.items.length ? <div className="table-wrap"><table><thead><tr><th>Description</th><th>Type</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
@@ -60,7 +77,7 @@ export default async function InvoiceDetailPage({
 
         <Panel title="Invoice Details">
           <p><strong>Date:</strong> {d.invoice.invoice_date}</p>
-          <p><strong>Due:</strong> {d.invoice.due_date ?? "—"}</p>
+          <p><strong>Due:</strong> {d.invoice.due_date ?? `Calculated when sent (${d.invoice.payment_terms})`}</p>
           <p><strong>Terms:</strong> {d.invoice.payment_terms}</p>
           <p><strong>Receipt Appendix:</strong> {d.invoice.include_receipt_appendix ? "Yes" : "No"}</p>
         </Panel>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdditionalServiceDocument } from "@/components/additional-services/additional-service-document";
 import { AcceptancePreviewCard } from "@/components/public/acceptance-preview-card";
-import { getCurrentUser } from "@/lib/auth/server";
+import { getCurrentAppUser } from "@/lib/auth/server";
 import { getCompanySettings } from "@/lib/data/app-data";
 import { getAdditionalServiceDetail } from "@/lib/data/detail-data";
 import "@/styles/public.css";
@@ -13,8 +13,8 @@ export default async function AdditionalServicePreviewPage({
   params: Promise<{ authorizationId: string }>;
 }) {
   const { authorizationId } = await params;
-  const { user } = await getCurrentUser();
-  if (!user) redirect("/login");
+  const { authUser, appUser } = await getCurrentAppUser();
+  if (!authUser || !appUser?.active) redirect("/login");
 
   const [{ authorization }, company] = await Promise.all([
     getAdditionalServiceDetail(authorizationId),
@@ -38,4 +38,3 @@ export default async function AdditionalServicePreviewPage({
     </main>
   );
 }
-

@@ -8,6 +8,7 @@ import { sendInternalAcceptanceNotification } from "@/lib/delivery/customer-acti
 import {
   publicRequestErrorResponse,
   readPublicAcceptance,
+  rejectCrossSiteSubmission,
   validatePublicToken,
 } from "@/lib/security/public-request";
 
@@ -18,6 +19,7 @@ export async function POST(
   context: { params: Promise<{ token: string }> }
 ) {
   try {
+    rejectCrossSiteSubmission(request);
     const { token: rawToken } = await context.params;
     const token = validatePublicToken(rawToken);
     const signer = await readPublicAcceptance(request);

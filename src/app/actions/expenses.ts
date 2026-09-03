@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase-admin";
 import { requiredText, optionalText, numberValue, boolValue } from "@/lib/validation/common";
 import { calculateExpenseBillableAmount } from "@/lib/billing";
 import { receiptStoragePath } from "@/lib/storage/private-storage";
+import { requiredUuid, safeOriginalFilename, validateUploadedFile } from "@/lib/security/uploads";
 
 type ExpenseRule = "actual" | "actual_plus_markup" | "fixed_rate" | "per_diem" | "mileage" | "allowance" | "included" | "not_billable";
 
@@ -152,17 +153,23 @@ export async function uploadReceiptForExpenseAction(formData: FormData) {
 
   const file = formData.get("file");
   if (!(file instanceof File)) throw new Error("Receipt file is required.");
+  await validateUploadedFile(file, "Receipt file", 10 * 1024 * 1024);
 
-  if (file.size > 15 * 1024 * 1024) throw new Error("Receipt file exceeds 15 MB.");
+  const expenseId = requiredUuid(formData.get("expense_id"), "Expense");
+  const projectId = requiredUuid(formData.get("project_id"), "Project");
+  const clientId = requiredUuid(formData.get("client_id"), "Client");
 
-  const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-  if (!allowed.includes(file.type)) throw new Error("Unsupported receipt file type.");
+  const [{ data: project, error: projectError }, { data: expense, error: expenseError }] = await Promise.all([
+    admin.from("projects").select("id").eq("id", projectId).eq("client_id", clientId).maybeSingle(),
+    admin.from("expenses").select("id").eq("id", expenseId).eq("project_id", projectId).maybeSingle(),
+  ]);
+  if (projectError) throw projectError;
+  if (expenseError) throw expenseError;
+  if (!project || !expense) {
+    throw new Error("The selected receipt, expense, project, and client do not match.");
+  }
 
-  const expenseId = requiredText(formData.get("expense_id"), "Expense");
-  const projectId = requiredText(formData.get("project_id"), "Project");
-  const clientId = requiredText(formData.get("client_id"), "Client");
-
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const safeName = safeOriginalFilename(file.name);
   const path = receiptStoragePath({ clientId, projectId, expenseId, filename: `${crypto.randomUUID()}-${safeName}` });
 
   const bytes = Buffer.from(await file.arrayBuffer());
@@ -182,7 +189,10 @@ export async function uploadReceiptForExpenseAction(formData: FormData) {
     attachment_type: "receipt",
   });
 
-  if (attachmentError) throw attachmentError;
+  if (attachmentError) {
+    await admin.storage.from(process.env.RECEIPTS_BUCKET ?? "hasa-receipts").remove([path]);
+    throw attachmentError;
+  }
 
   revalidatePath("/expenses");
   revalidatePath("/receipts");

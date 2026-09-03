@@ -82,6 +82,18 @@ export function validatePublicToken(token: string): string {
   return token;
 }
 
+export function rejectCrossSiteSubmission(request: Request) {
+  const fetchSite = request.headers.get("sec-fetch-site")?.toLowerCase();
+  if (fetchSite === "cross-site") {
+    throw new PublicRequestError("Cross-site document approval is not permitted.", 403);
+  }
+
+  const origin = request.headers.get("origin");
+  if (origin && origin !== new URL(request.url).origin) {
+    throw new PublicRequestError("Cross-site document approval is not permitted.", 403);
+  }
+}
+
 export async function readPublicAcceptance(request: Request): Promise<PublicAcceptanceInput> {
   let parsed: unknown;
   try {

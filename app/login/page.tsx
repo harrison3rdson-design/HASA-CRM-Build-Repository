@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/forms/login-form";
-import { getCurrentUser } from "@/lib/auth/server";
+import { getCurrentAppUser } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -9,8 +9,8 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const { user } = await getCurrentUser();
-  if (user) redirect("/dashboard");
+  const { authUser, appUser } = await getCurrentAppUser();
+  if (authUser && appUser?.active) redirect("/dashboard");
   const { error } = await searchParams;
 
   return (

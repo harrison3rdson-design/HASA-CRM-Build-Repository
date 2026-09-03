@@ -15,7 +15,8 @@ describe("customer proposal preview", () => {
   it("requires authentication and has no customer-delivery side effects", () => {
     const previewRoute = read("app/proposal-previews/[proposalId]/page.tsx");
 
-    expect(previewRoute).toContain("await getCurrentUser()");
+    expect(previewRoute).toContain("await getCurrentAppUser()");
+    expect(previewRoute).toContain("!appUser?.active");
     expect(previewRoute).toContain("redirect(\"/login\")");
     expect(previewRoute).toContain("<ProposalDocument");
     expect(previewRoute).toContain("<AcceptancePreviewCard");

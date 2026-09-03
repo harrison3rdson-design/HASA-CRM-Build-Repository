@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AcceptancePreviewCard } from "@/components/public/acceptance-preview-card";
 import { ProposalDocument } from "@/components/public/proposal-document";
-import { getCurrentUser } from "@/lib/auth/server";
+import { getCurrentAppUser } from "@/lib/auth/server";
 import { getCompanySettings } from "@/lib/data/app-data";
 import { getProposalDetail } from "@/lib/data/detail-data";
 import { proposalRevisionLabel } from "@/lib/proposal-revisions";
@@ -16,8 +16,8 @@ export default async function ProposalPreviewPage({
   params: Promise<{ proposalId: string }>;
 }) {
   const { proposalId } = await params;
-  const { user } = await getCurrentUser();
-  if (!user) redirect("/login");
+  const { authUser, appUser } = await getCurrentAppUser();
+  if (!authUser || !appUser?.active) redirect("/login");
 
   const [detail, company] = await Promise.all([
     getProposalDetail(proposalId),

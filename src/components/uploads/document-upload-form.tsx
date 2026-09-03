@@ -18,7 +18,7 @@ export function DocumentUploadForm({
       </label>
       <label>Subtype<input name="document_subtype" /></label>
       <label>Date<input name="document_date" type="date" /></label>
-      <label className="full">File<input name="file" type="file" required /></label>
+      <label className="full">File<input name="file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required /></label>
       <div className="full"><button className="primary-button" type="submit">Upload Document</button></div>
     </form>
   );

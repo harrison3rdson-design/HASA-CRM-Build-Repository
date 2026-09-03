@@ -39,7 +39,8 @@ describe("additional service approval workflow", () => {
     const preview = read("app/additional-service-previews/[authorizationId]/page.tsx");
     const customer = read("app/public/additional-services/[token]/page.tsx");
 
-    expect(preview).toContain("await getCurrentUser()");
+    expect(preview).toContain("await getCurrentAppUser()");
+    expect(preview).toContain("!appUser?.active");
     expect(preview).toContain("<AdditionalServiceDocument");
     expect(preview).toContain('buttonText="Accept Additional Service"');
     expect(customer).toContain("<AdditionalServiceDocument");

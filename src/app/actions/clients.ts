@@ -2,11 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth/server";
+import { Policies } from "@/lib/auth/action-policy";
 import { requiredText, optionalText } from "@/lib/validation/common";
 
 export async function createClientAction(formData: FormData) {
-  const { supabase } = await requireUser();
+  const { supabase } = await Policies.clientWrite();
 
   const payload = {
     company_name: requiredText(formData.get("company_name"), "Company name"),
@@ -34,7 +34,7 @@ export async function createClientAction(formData: FormData) {
 }
 
 export async function updateClientAction(formData: FormData) {
-  const { supabase } = await requireUser();
+  const { supabase } = await Policies.clientWrite();
 
   const clientId = requiredText(formData.get("client_id"), "Client");
   const payload = {
@@ -66,7 +66,7 @@ export async function updateClientAction(formData: FormData) {
 }
 
 export async function createContactAction(formData: FormData) {
-  const { supabase } = await requireUser();
+  const { supabase } = await Policies.contactWrite();
 
   const clientId = requiredText(formData.get("client_id"), "Client");
   const payload = {

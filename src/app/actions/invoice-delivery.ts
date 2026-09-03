@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/auth/server";
+import { Policies } from "@/lib/auth/action-policy";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { generateInvoicePdf } from "@/lib/invoices/render";
 import { deliverPublicLink } from "@/lib/delivery/send-document";
@@ -47,7 +47,7 @@ export async function generateAndSendInvoiceAction(input:{
   invoiceId:string;
   method:DeliveryMethod;
 }): Promise<SendInvoiceResult> {
-  await requireUser();
+  await Policies.invoiceIssue();
   const admin=createAdminClient();
 
   const {data:invoice,error}=await admin.from("invoices").select(`

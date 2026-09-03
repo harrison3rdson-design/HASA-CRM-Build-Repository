@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { requiredText, optionalText, numberValue, boolValue } from "@/lib/validation/common";
 import { parsePaymentTerms } from "@/lib/payment-terms";
@@ -211,7 +210,7 @@ export async function createProposalAction(
   _previousState: CreateProposalActionState,
   formData: FormData,
 ): Promise<CreateProposalActionState> {
-  const { supabase, authUser } = await requireUser();
+  const { supabase, appUser } = await Policies.proposalWrite();
 
   let proposalInput: {
     clientId: string;
@@ -304,12 +303,6 @@ export async function createProposalAction(
     await supabase.from("proposals").delete().eq("id", proposal.id);
   };
 
-  const { data: userRecord } = await supabase
-    .from("app_users")
-    .select("id")
-    .eq("auth_user_id", authUser.id)
-    .single();
-
   const { data: revision, error: revisionError } = await supabase
     .from("proposal_revisions")
     .insert({
@@ -321,7 +314,7 @@ export async function createProposalAction(
       payment_terms: parsedPaymentTerms,
       validity_days: validityDays,
       billing_method: billingMethod,
-      created_by: userRecord?.id ?? null,
+      created_by: appUser.id,
     })
     .select("id")
     .single();
@@ -379,7 +372,7 @@ export async function createProposalAction(
 }
 
 export async function updateProposalPrimaryContactAction(formData: FormData) {
-  await requireUser();
+  await Policies.proposalWrite();
   const admin = createAdminClient();
   const proposalId = requiredText(formData.get("proposal_id"), "Proposal");
   const contactId = requiredText(formData.get("primary_contact_id"), "Primary Contact");
@@ -428,7 +421,7 @@ export async function updateProposalPrimaryContactAction(formData: FormData) {
 }
 
 export async function updateProposalRevisionPaymentTermsAction(formData: FormData) {
-  await requireUser();
+  await Policies.proposalWrite();
   const admin = createAdminClient();
   const revisionId = requiredText(formData.get("revision_id"), "Proposal revision");
   const paymentTerms = parsePaymentTerms(formData.get("payment_terms"));
@@ -453,7 +446,7 @@ export async function updateProposalRevisionPaymentTermsAction(formData: FormDat
 }
 
 export async function updateProposalRevisionAction(formData: FormData) {
-  await requireUser();
+  await Policies.proposalWrite();
   const admin = createAdminClient();
   const revisionId = requiredText(formData.get("revision_id"), "Proposal revision");
   const paymentTerms = parsePaymentTerms(formData.get("payment_terms"));
@@ -482,7 +475,7 @@ export async function updateProposalRevisionAction(formData: FormData) {
 }
 
 export async function createProposalRevisionAction(proposalId: string) {
-  await requireUser();
+  await Policies.proposalWrite();
   const admin = createAdminClient();
 
   const { data: current, error } = await admin
@@ -545,7 +538,7 @@ export async function createProposalRevisionAction(proposalId: string) {
 }
 
 export async function deleteLatestProposalRevisionAction(proposalId: string) {
-  await requireUser();
+  await Policies.proposalWrite();
   const admin = createAdminClient();
 
   const { data: currentRevision, error } = await admin.rpc(
@@ -564,7 +557,7 @@ export async function deleteLatestProposalRevisionAction(proposalId: string) {
 }
 
 export async function deleteUnissuedDraftProposalAction(proposalId: string) {
-  await requireUser();
+  await Policies.proposalWrite();
   const admin = createAdminClient();
 
   const { data: deletedProposalNumber, error } = await admin.rpc(

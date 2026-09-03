@@ -1,8 +1,10 @@
 import { createAdminClient } from "@/lib/supabase-admin";
+import { Policies } from "@/lib/auth/action-policy";
 import { parsePaymentTerms } from "@/lib/payment-terms";
 import type { ProjectWorkOption } from "@/lib/project-work-options";
 
 export async function getDashboardData(){
+  await Policies.internalRead();
   const s=createAdminClient();
   const [{data:proposals},{data:projects},{data:invoices},{data:receipts}] = await Promise.all([
     s.from("proposals").select("id,status"),
@@ -21,6 +23,7 @@ export async function getDashboardData(){
 }
 
 async function q(table:string, select:string, order?:string){
+  await Policies.internalRead();
   const s=createAdminClient();
   let query=s.from(table).select(select);
   if(order) query=query.order(order,{ascending:false});
@@ -39,6 +42,7 @@ export const getInvoices=()=>q("invoices","id,invoice_number,invoice_date,due_da
 export const getDocuments=()=>q("documents","id,title,document_type,document_subtype,document_date,locked,storage_path","created_at");
 
 export async function getProjectOptions() {
+  await Policies.internalRead();
   const s = createAdminClient();
   const { data, error } = await s
     .from("projects")
@@ -50,6 +54,7 @@ export async function getProjectOptions() {
 }
 
 export async function getProjectWorkOptions(): Promise<ProjectWorkOption[]> {
+  await Policies.internalRead();
   const s = createAdminClient();
   const { data: projects, error: projectsError } = await s
     .from("projects")
@@ -179,6 +184,7 @@ export async function getProjectWorkOptions(): Promise<ProjectWorkOption[]> {
 }
 
 export async function getCompanySettings(){
+  await Policies.internalRead();
   const s=createAdminClient();
   const {data,error}=await s.from("company_settings").select("*").limit(1).single();
   if(error) throw error;
@@ -186,6 +192,7 @@ export async function getCompanySettings(){
 }
 
 export async function getProposalFormData() {
+  await Policies.internalRead();
   const s = createAdminClient();
   const [{ data: clients, error: clientsError }, { data: settings, error: settingsError }] = await Promise.all([
     s.from("clients")
@@ -208,6 +215,7 @@ export async function getProposalFormData() {
 }
 
 export async function getInvoiceFormData() {
+  await Policies.internalRead();
   const s = createAdminClient();
   const [{ data: projects, error: projectsError }, { data: settings, error: settingsError }] = await Promise.all([
     s.from("project_invoice_context")

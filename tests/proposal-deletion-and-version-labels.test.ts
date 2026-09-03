@@ -61,7 +61,7 @@ describe("unissued draft proposal deletion", () => {
     const button = read("src/components/proposals/delete-proposal-button.tsx");
     const proposalPage = read("src/app/(app)/proposals/[proposalId]/page.tsx");
 
-    expect(action).toContain("await requireUser()");
+    expect(action).toContain("await Policies.proposalWrite()");
     expect(action).toContain('"delete_unissued_draft_proposal"');
     expect(button).toContain("Delete Draft Proposal");
     expect(button).toContain("window.confirm");

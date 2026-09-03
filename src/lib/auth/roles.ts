@@ -5,6 +5,14 @@ export type AppRole =
   | "accounting"
   | "read_only";
 
+export const INTERNAL_ROLES: readonly AppRole[] = [
+  "owner_admin",
+  "project_manager",
+  "staff",
+  "accounting",
+  "read_only",
+];
+
 export function canIssueInvoices(role: AppRole): boolean {
   return role === "owner_admin" || role === "accounting";
 }

@@ -1,13 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/auth/server";
+import { Policies } from "@/lib/auth/action-policy";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { requiredText, optionalText } from "@/lib/validation/common";
 import { documentStoragePath } from "@/lib/storage/private-storage";
 
 export async function uploadDocumentAction(formData: FormData) {
-  await requireUser();
+  await Policies.documentWrite();
   const admin = createAdminClient();
 
   const file = formData.get("file");

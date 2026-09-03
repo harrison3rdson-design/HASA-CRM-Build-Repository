@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth/server";
+import { Policies } from "@/lib/auth/action-policy";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { requiredText, optionalText, numberValue, boolValue } from "@/lib/validation/common";
 import { calculateExpenseBillableAmount } from "@/lib/billing";
@@ -101,14 +101,8 @@ async function approvedExpenseSnapshot(supabase: any, projectId: string, formDat
 }
 
 export async function createExpenseAction(formData: FormData) {
-  const { supabase, authUser } = await requireUser();
+  const { supabase, appUser } = await Policies.expenseWrite();
   const projectId = requiredText(formData.get("project_id"), "Project");
-
-  const { data: user } = await supabase
-    .from("app_users")
-    .select("id")
-    .eq("auth_user_id", authUser.id)
-    .single();
 
   const actualCost = numberValue(formData.get("actual_cost"), "Actual cost", { min: 0 });
   const estimate = await approvedExpenseSnapshot(supabase, projectId, formData);
@@ -139,7 +133,7 @@ export async function createExpenseAction(formData: FormData) {
       billable_amount: billableAmount,
       billing_rule: rule,
       markup_percent: markupPercent,
-      created_by: user?.id ?? null,
+      created_by: appUser.id,
     })
     .select("id,project_id")
     .single();
@@ -153,7 +147,7 @@ export async function createExpenseAction(formData: FormData) {
 }
 
 export async function uploadReceiptForExpenseAction(formData: FormData) {
-  await requireUser();
+  await Policies.expenseWrite();
   const admin = createAdminClient();
 
   const file = formData.get("file");

@@ -1,4 +1,4 @@
-import { requireUser } from "@/lib/auth/server";
+import { Policies } from "@/lib/auth/action-policy";
 import { renderInvoicePdf } from "@/lib/invoices/render";
 
 export const maxDuration = 60;
@@ -8,7 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ invoiceId: string }> },
 ) {
   try {
-    await requireUser();
+    await Policies.internalRead();
   } catch {
     return Response.json({ error: "Authentication required." }, { status: 401 });
   }

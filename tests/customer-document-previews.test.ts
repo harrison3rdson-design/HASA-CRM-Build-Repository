@@ -35,7 +35,7 @@ describe("customer document previews and branding", () => {
     const invoiceRenderer = source("src/lib/invoices/render.ts");
     const invoicePage = source("app/(app)/billing/[invoiceId]/page.tsx");
 
-    expect(previewRoute).toContain("requireUser");
+    expect(previewRoute).toContain("Policies.internalRead");
     expect(previewRoute).toContain("renderInvoicePdf(invoiceId)");
     expect(previewRoute).toContain('status: 401');
     expect(previewRoute).toContain('status: 404');

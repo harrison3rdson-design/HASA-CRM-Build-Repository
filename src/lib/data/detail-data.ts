@@ -1,6 +1,8 @@
 import { createAdminClient } from "@/lib/supabase-admin";
+import { Policies } from "@/lib/auth/action-policy";
 
 export async function getClientDetail(clientId: string) {
+  await Policies.internalRead();
   const s = createAdminClient();
 
   const [{ data: client, error: clientError }, { data: contacts }, { data: proposals }, { data: projects }] =
@@ -16,6 +18,7 @@ export async function getClientDetail(clientId: string) {
 }
 
 export async function getProposalDetail(proposalId: string) {
+  await Policies.internalRead();
   const s = createAdminClient();
 
   const { data: proposal, error } = await s
@@ -99,6 +102,7 @@ export async function getProposalDetail(proposalId: string) {
 }
 
 export async function getProjectDetail(projectId: string) {
+  await Policies.internalRead();
   const s = createAdminClient();
 
   const [{ data: project, error }, { data: phases }, { data: time }, { data: expenses }, { data: authorizations }, { data: invoices }, { data: financial }] =
@@ -138,6 +142,7 @@ export async function getProjectDetail(projectId: string) {
 }
 
 export async function getAdditionalServiceDetail(additionalServiceId: string) {
+  await Policies.internalRead();
   const s = createAdminClient();
 
   const [{ data: authorization, error }, { data: deliveries, error: deliveriesError }] = await Promise.all([
@@ -165,6 +170,7 @@ export async function getAdditionalServiceDetail(additionalServiceId: string) {
 }
 
 export async function getInvoiceDetail(invoiceId: string) {
+  await Policies.internalRead();
   const s = createAdminClient();
 
   const [{ data: invoice, error }, { data: items }, { data: payments }, { data: deliveries }] =

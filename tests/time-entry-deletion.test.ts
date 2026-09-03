@@ -10,7 +10,7 @@ describe("safe time-entry deletion", () => {
   it("requires authentication, authorization, and an unlocked unbilled entry", () => {
     const action = read("src/app/actions/time.ts");
 
-    expect(action).toContain("await requireUser()");
+    expect(action).toContain("await Policies.timeOwn()");
     expect(action).toContain('["owner_admin", "project_manager"]');
     expect(action).toContain('entry.user_id !== user.id');
     expect(action).toContain('.eq("locked", false)');

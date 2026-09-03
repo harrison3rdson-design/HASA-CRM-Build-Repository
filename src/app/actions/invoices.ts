@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { requiredText, optionalText, numberValue, boolValue } from "@/lib/validation/common";
 import { parsePaymentTerms } from "@/lib/payment-terms";
@@ -10,7 +9,7 @@ import { roundHoursUp } from "@/lib/time-increments";
 import { Policies } from "@/lib/auth/action-policy";
 
 export async function createInvoiceAction(formData: FormData) {
-  await requireUser();
+  await Policies.invoiceCreate();
   const admin = createAdminClient();
 
   const projectId = requiredText(formData.get("project_id"), "Project");
@@ -111,7 +110,7 @@ export async function createInvoiceAction(formData: FormData) {
 }
 
 export async function addInvoiceItemAction(formData: FormData) {
-  await requireUser();
+  await Policies.invoiceCreate();
   const admin = createAdminClient();
 
   const invoiceId = requiredText(formData.get("invoice_id"), "Invoice");
@@ -142,7 +141,7 @@ export async function addInvoiceItemAction(formData: FormData) {
 }
 
 export async function issueInvoiceAction(invoiceId: string) {
-  await requireUser();
+  await Policies.invoiceIssue();
   const admin = createAdminClient();
   const { error } = await admin.rpc("issue_invoice", { p_invoice_id: invoiceId });
   if (error) throw error;
@@ -150,7 +149,7 @@ export async function issueInvoiceAction(invoiceId: string) {
 }
 
 export async function recordPaymentAction(formData: FormData) {
-  await requireUser();
+  await Policies.paymentPost();
   const admin = createAdminClient();
 
   const { error } = await admin.rpc("record_invoice_payment", {

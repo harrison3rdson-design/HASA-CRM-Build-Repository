@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/auth/server";
+import { Policies } from "@/lib/auth/action-policy";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { createProposalShareLink, createAdditionalServiceShareLink } from "@/lib/public/share-links";
 import { deliverPublicLink } from "@/lib/delivery/send-document";
@@ -40,7 +40,7 @@ export async function sendProposalAction(input: {
   revisionId: string;
   method: "sms" | "email" | "both";
 }): Promise<SendDocumentResult> {
-  await requireUser();
+  await Policies.proposalSend();
   const admin = createAdminClient();
 
   const { data: proposal, error } = await admin.from("proposals").select(`
@@ -187,7 +187,7 @@ export async function sendAdditionalServiceAction(input: {
   additionalServiceId: string;
   method: "sms" | "email" | "both";
 }): Promise<SendDocumentResult> {
-  await requireUser();
+  await Policies.projectWrite();
   const admin = createAdminClient();
 
   const { data: a, error } = await admin.from("additional_services").select(`

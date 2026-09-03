@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth/server";
+import { Policies } from "@/lib/auth/action-policy";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { createSignedDocumentUrl } from "@/lib/storage/private-storage";
 
@@ -7,7 +7,7 @@ export async function GET(
   _request: Request,
   context: { params: Promise<{ documentId: string }> },
 ) {
-  await requireUser();
+  await Policies.internalRead();
   const { documentId } = await context.params;
   const admin = createAdminClient();
   const { data: document, error } = await admin

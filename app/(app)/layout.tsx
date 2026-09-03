@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signOutAction } from "@/app/actions/auth";
-import { getCurrentUser } from "@/lib/auth/server";
+import { getCurrentAppUser } from "@/lib/auth/server";
 import "@/styles/app.css";
 import "@/styles/phase6-forms.css";
 import "@/styles/phase7-details.css";
@@ -15,8 +15,8 @@ const nav = [
 ];
 
 export default async function AppLayout({children}:{children:ReactNode}) {
-  const { user } = await getCurrentUser();
-  if (!user) redirect("/login");
+  const { authUser, appUser } = await getCurrentAppUser();
+  if (!authUser || !appUser?.active) redirect("/login");
 
   return <div className="app-shell">
     <aside className="sidebar">

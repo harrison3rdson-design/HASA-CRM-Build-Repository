@@ -2,13 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth/server";
+import { Policies } from "@/lib/auth/action-policy";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { requiredText } from "@/lib/validation/common";
 import { parseAdditionalServiceItems } from "@/lib/additional-service-items";
 
 export async function createAdditionalServiceAction(formData: FormData) {
-  await requireUser();
+  await Policies.projectWrite();
   const admin = createAdminClient();
 
   const projectId = requiredText(formData.get("project_id"), "Project");
@@ -29,7 +29,7 @@ export async function createAdditionalServiceAction(formData: FormData) {
 }
 
 export async function updateAdditionalServiceAction(formData: FormData) {
-  await requireUser();
+  await Policies.projectWrite();
   const admin = createAdminClient();
 
   const additionalServiceId = requiredText(formData.get("additional_service_id"), "Additional service");

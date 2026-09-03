@@ -2,20 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth/server";
+import { Policies } from "@/lib/auth/action-policy";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { requiredText, optionalText, numberValue, boolValue } from "@/lib/validation/common";
 import { roundHoursUp } from "@/lib/time-increments";
-
-async function currentAppUserId(supabase: any, authUserId: string) {
-  const { data, error } = await supabase
-    .from("app_users")
-    .select("id,role,active,default_bill_rate,internal_cost_rate")
-    .eq("auth_user_id", authUserId)
-    .single();
-  if (error) throw error;
-  return data;
-}
 
 async function approvedLaborSnapshot(supabase: any, projectId: string, formData: FormData) {
   const encodedSource = optionalText(formData.get("approved_labor_source"));
@@ -77,8 +67,7 @@ async function approvedLaborSnapshot(supabase: any, projectId: string, formData:
 }
 
 export async function startTimerAction(formData: FormData) {
-  const { supabase, authUser } = await requireUser();
-  const user = await currentAppUserId(supabase, authUser.id);
+  const { supabase, appUser: user } = await Policies.timeOwn();
   const projectId = requiredText(formData.get("project_id"), "Project");
   const feeItem = await approvedLaborSnapshot(supabase, projectId, formData);
 
@@ -95,8 +84,8 @@ export async function startTimerAction(formData: FormData) {
       description: optionalText(formData.get("description")),
       hours: 0,
       billable: boolValue(formData.get("billable")),
-      billing_rate: feeItem ? Number(feeItem.rate) : numberValue(formData.get("billing_rate") ?? user.default_bill_rate ?? 0, "Billing rate", { min: 0 }),
-      internal_cost_rate: numberValue(formData.get("internal_cost_rate") ?? user.internal_cost_rate ?? 0, "Internal cost rate", { min: 0 }),
+      billing_rate: feeItem ? Number(feeItem.rate) : numberValue(formData.get("billing_rate") ?? String(user.default_bill_rate ?? 0), "Billing rate", { min: 0 }),
+      internal_cost_rate: numberValue(formData.get("internal_cost_rate") ?? String(user.internal_cost_rate ?? 0), "Internal cost rate", { min: 0 }),
       is_travel_time: boolValue(formData.get("is_travel_time")),
       timer_started_at: new Date().toISOString(),
     })
@@ -109,7 +98,7 @@ export async function startTimerAction(formData: FormData) {
 }
 
 export async function stopTimerAction(timeEntryId: string) {
-  const { supabase } = await requireUser();
+  const { supabase } = await Policies.timeOwn();
 
   const { data: entry, error } = await supabase
     .from("time_entries")
@@ -139,8 +128,7 @@ export async function stopTimerAction(timeEntryId: string) {
 }
 
 export async function addManualTimeAction(formData: FormData) {
-  const { supabase, authUser } = await requireUser();
-  const user = await currentAppUserId(supabase, authUser.id);
+  const { supabase, appUser: user } = await Policies.timeOwn();
   const projectId = requiredText(formData.get("project_id"), "Project");
   const feeItem = await approvedLaborSnapshot(supabase, projectId, formData);
 
@@ -155,8 +143,8 @@ export async function addManualTimeAction(formData: FormData) {
     description: optionalText(formData.get("description")),
     hours: roundHoursUp(numberValue(formData.get("hours"), "Hours", { min: 0.01 })),
     billable: boolValue(formData.get("billable")),
-    billing_rate: feeItem ? Number(feeItem.rate) : numberValue(formData.get("billing_rate") ?? user.default_bill_rate ?? 0, "Billing rate", { min: 0 }),
-    internal_cost_rate: numberValue(formData.get("internal_cost_rate") ?? user.internal_cost_rate ?? 0, "Internal cost rate", { min: 0 }),
+    billing_rate: feeItem ? Number(feeItem.rate) : numberValue(formData.get("billing_rate") ?? String(user.default_bill_rate ?? 0), "Billing rate", { min: 0 }),
+    internal_cost_rate: numberValue(formData.get("internal_cost_rate") ?? String(user.internal_cost_rate ?? 0), "Internal cost rate", { min: 0 }),
     is_travel_time: boolValue(formData.get("is_travel_time")),
   });
 
@@ -168,10 +156,7 @@ export async function addManualTimeAction(formData: FormData) {
 }
 
 export async function deleteTimeEntryAction(timeEntryId: string) {
-  const { supabase, authUser } = await requireUser();
-  const user = await currentAppUserId(supabase, authUser.id);
-
-  if (!user.active) throw new Error("Active application user required.");
+  const { supabase, appUser: user } = await Policies.timeOwn();
 
   const { data: entry, error: entryError } = await supabase
     .from("time_entries")

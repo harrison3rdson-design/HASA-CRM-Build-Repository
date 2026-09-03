@@ -1,5 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import type { AppRole } from "@/lib/auth/roles";
+
+export type ActiveAppUser = {
+  id: string;
+  role: AppRole;
+  active: true;
+  default_bill_rate: number | null;
+  internal_cost_rate: number | null;
+};
 
 export async function createAuthenticatedServerClient() {
   const cookieStore = await cookies();
@@ -37,6 +46,45 @@ export async function requireUser() {
   }
 
   return { supabase, authUser: user };
+}
+
+export async function getCurrentAppUser() {
+  const { supabase, user } = await getCurrentUser();
+
+  if (!user) {
+    return { supabase, authUser: null, appUser: null };
+  }
+
+  const { data, error } = await supabase
+    .from("app_users")
+    .select("id,role,active,default_bill_rate,internal_cost_rate")
+    .eq("auth_user_id", user.id)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  return {
+    supabase,
+    authUser: user,
+    appUser: data ?? null,
+  };
+}
+
+export async function requireActiveUser() {
+  const { supabase, authUser, appUser } = await getCurrentAppUser();
+
+  if (!authUser) {
+    throw new Error("Authentication required.");
+  }
+  if (!appUser?.active) {
+    throw new Error("Active application user required.");
+  }
+
+  return {
+    supabase,
+    authUser,
+    appUser: appUser as ActiveAppUser,
+  };
 }
 
 export async function getCurrentUser() {

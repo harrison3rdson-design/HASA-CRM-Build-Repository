@@ -28,6 +28,8 @@ describe("customer document previews and branding", () => {
 
     expect(previewRoute).toContain("requireUser");
     expect(previewRoute).toContain("renderInvoicePdf(invoiceId)");
+    expect(previewRoute).toContain('status: 401');
+    expect(previewRoute).toContain('status: 404');
     expect(previewRoute).toContain('"Content-Disposition": `inline; filename="${filename}"`');
     expect(previewRoute).not.toContain("generateInvoicePdf");
     expect(previewRoute).not.toContain(".upload(");

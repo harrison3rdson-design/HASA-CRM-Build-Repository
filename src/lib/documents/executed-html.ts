@@ -4,6 +4,8 @@ import { hasaHorizontalLogoDataUri } from "@/lib/branding/assets";
 
 export function executedProposalHtml(data: any, signer: any) {
   const hasaLogoDataUri = hasaHorizontalLogoDataUri();
+  const showMaterialsSummary = (data.materials ?? []).length > 0
+    || Number(data.revision.estimated_materials ?? 0) !== 0;
   const proposalTerms = escapeHtml(data.revision.proposal_terms ?? "").replace(/\n/g, "<br>");
   const proposalTermsSection = proposalTerms
     ? '<section class="proposal-terms"><h1>Proposal Terms and Conditions</h1><p>Incorporated into Proposal #'
@@ -62,7 +64,7 @@ export function executedProposalHtml(data: any, signer: any) {
     <section class="proposal-summary-area">
       <div class="proposal-section-heading"><span class="proposal-section-label">Proposal Summary</span><h2>Investment and Commercial Terms</h2><p>This summary identifies the proposed total, payment terms, and validity period.</p></div>
       <div class="proposal-summary-row"><span>Professional Fee</span><strong>${money(data.revision.professional_fee)}</strong></div>
-      <div class="proposal-summary-row"><span>Estimated Materials</span><strong>${money(data.revision.estimated_materials)}</strong></div>
+      ${showMaterialsSummary ? `<div class="proposal-summary-row"><span>Estimated Materials</span><strong>${money(data.revision.estimated_materials)}</strong></div>` : ""}
       <div class="proposal-summary-row"><span>Estimated Expenses</span><strong>${money(data.revision.estimated_expenses)}</strong></div>
       <div class="proposal-summary-row total"><span>Estimated Total</span><strong>${money(data.revision.estimated_total)}</strong></div>
       <div class="proposal-commercial-terms"><span><strong>Payment Terms:</strong> ${escapeHtml(data.revision.payment_terms ?? "")}</span><span><strong>Proposal Validity:</strong> ${escapeHtml(data.revision.validity_days ?? "")} days</span></div>

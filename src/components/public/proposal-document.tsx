@@ -86,6 +86,7 @@ export function ProposalDocument({
 }: ProposalDocumentProps) {
   const proposalTerms = revision.proposal_terms
     ?? (revision.locked ? "" : resolveDefaultProposalTerms(company.default_proposal_terms));
+  const showMaterialsSummary = materials.length > 0 || Number(revision.estimated_materials ?? 0) !== 0;
 
   return (
     <>
@@ -182,7 +183,9 @@ export function ProposalDocument({
           </div>
           <div className="public-totals">
             <div><span>Professional Fee</span><strong>{money(revision.professional_fee)}</strong></div>
-            <div><span>Estimated Materials</span><strong>{money(revision.estimated_materials)}</strong></div>
+            {showMaterialsSummary ? (
+              <div><span>Estimated Materials</span><strong>{money(revision.estimated_materials)}</strong></div>
+            ) : null}
             <div><span>Estimated Expenses</span><strong>{money(revision.estimated_expenses)}</strong></div>
             <div><span>Estimated Total</span><strong>{money(revision.estimated_total)}</strong></div>
           </div>

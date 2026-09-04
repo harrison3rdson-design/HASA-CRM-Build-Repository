@@ -35,6 +35,16 @@ describe("customer document previews and branding", () => {
     expect(executedProposal).toContain('class="proposal-summary-area"');
   });
 
+  it("omits a zero-value materials summary when no materials exist", () => {
+    const proposalDocument = source("src/components/public/proposal-document.tsx");
+    const executedProposal = source("src/lib/documents/executed-html.ts");
+
+    expect(proposalDocument).toContain("const showMaterialsSummary = materials.length > 0");
+    expect(proposalDocument).toContain("{showMaterialsSummary ? (");
+    expect(executedProposal).toContain("const showMaterialsSummary = (data.materials ?? []).length > 0");
+    expect(executedProposal).toContain("${showMaterialsSummary ?");
+  });
+
   it("packages filesystem branding assets with every serverless PDF route", () => {
     const config = source("next.config.ts");
     const invoiceRenderer = source("src/lib/invoices/render.ts");

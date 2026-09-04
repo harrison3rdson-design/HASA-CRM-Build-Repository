@@ -9,7 +9,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "recovery:verify": "node scripts/verify-recovery-backup.mjs"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "1.6.1",

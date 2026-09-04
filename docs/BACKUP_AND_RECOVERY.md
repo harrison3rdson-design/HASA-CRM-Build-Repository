@@ -29,6 +29,14 @@ completed MFA challenge, and browsers and intermediary systems are instructed no
 The downloaded JSON contains table data, bucket configuration, private stored files encoded as Base64,
 record and file counts, and SHA-256 hashes.
 
+Before storing or restoring a package, verify it offline. The verifier reads the file locally, performs no
+network requests, and prints only the source project reference, backup timestamp, checksums, and counts. It
+does not print customer records or stored-file contents:
+
+    pnpm recovery:verify -- ABSOLUTE_PATH_TO_HASA_RECOVERY_JSON
+
+Do not proceed with a restore if verification reports a checksum, count, Base64, or Storage-path error.
+
 An authorized developer who already has a local-only copy of the required production environment values
 may instead create a directory-form package. The temporary environment file must remain outside Git and
 must be deleted immediately after the package passes verification.

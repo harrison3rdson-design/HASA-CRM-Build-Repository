@@ -22,9 +22,25 @@ export default async function Page() {
         <MfaManagement />
       </Panel>
       {managedUsers ? (
-        <Panel title="User Access & Roles">
-          <UserManagement users={managedUsers.users} currentAppUserId={managedUsers.currentAppUserId} />
-        </Panel>
+        <>
+          <Panel title="User Access & Roles">
+            <UserManagement users={managedUsers.users} currentAppUserId={managedUsers.currentAppUserId} />
+          </Panel>
+          <Panel title="Backup & Recovery">
+            <p className="muted">
+              Download a point-in-time copy of all management records and private stored documents.
+              The file contains confidential customer information and should be kept in an encrypted,
+              access-controlled location outside this application.
+            </p>
+            <form method="post" action="/api/admin/recovery-backup">
+              <button className="primary-button" type="submit">Download Recovery Backup</button>
+            </form>
+            <p className="footnote">
+              Only an Owner Administrator with completed MFA can create this backup. Passwords,
+              active sessions, provider keys, and authenticator secrets are never included.
+            </p>
+          </Panel>
+        </>
       ) : null}
     </>
   );

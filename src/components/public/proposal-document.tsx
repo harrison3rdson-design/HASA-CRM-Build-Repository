@@ -111,70 +111,87 @@ export function ProposalDocument({
         <p className="public-muted">{proposal.client?.company_name}</p>
         {proposal.project_location ? <p>{proposal.project_location}</p> : null}
 
-        {sections.map((section) => (
-          <section key={section.id}>
-            <h2>{section.heading ?? section.section_type}</h2>
-            <p className="preline">{section.content}</p>
+        <section className="proposal-details-area" aria-labelledby="proposal-details-heading">
+          <div className="proposal-section-heading">
+            <span>Proposal Details</span>
+            <h2 id="proposal-details-heading">Scope and Pricing Details</h2>
+            <p>The proposed work and itemized pricing are shown below.</p>
+          </div>
+
+          {sections.map((section) => (
+            <section key={section.id}>
+              <h2>{section.heading ?? section.section_type}</h2>
+              <p className="preline">{section.content}</p>
+            </section>
+          ))}
+
+          <section>
+            <h2>Professional Fees</h2>
+            <div className="public-table">
+              {fees.map((fee) => (
+                <div key={fee.id}>
+                  <span>
+                    {fee.description}
+                    <small>{servicePriceDetail(fee)}</small>
+                  </span>
+                  <strong>{money(fee.amount)}</strong>
+                </div>
+              ))}
+            </div>
           </section>
-        ))}
 
-        <section>
-          <h2>Professional Fees</h2>
-          <div className="public-table">
-            {fees.map((fee) => (
-              <div key={fee.id}>
-                <span>
-                  {fee.description}
-                  <small>{servicePriceDetail(fee)}</small>
-                </span>
-                <strong>{money(fee.amount)}</strong>
-              </div>
-            ))}
+          {materials.length ? <section>
+            <h2>Materials</h2>
+            <div className="public-table">
+              {materials.map((material) => (
+                <div key={material.id}>
+                  <span>
+                    {material.description}
+                    <small>{quantityLabel(material.quantity, material.unit)} × {money(material.unit_price)}</small>
+                  </span>
+                  <strong>{money(material.amount)}</strong>
+                </div>
+              ))}
+            </div>
+          </section> : null}
+
+          <section>
+            <h2>Estimated Expenses</h2>
+            <div className="public-table">
+              {expenses.map((expense) => (
+                <div key={expense.id}>
+                  <span>
+                    {expense.category}{expense.description ? ` — ${expense.description}` : ""}
+                    <small>
+                      {quantityLabel(expense.estimated_quantity, expense.unit ?? "unit")} × {money(expense.estimated_rate)}
+                      {Number(expense.markup_percent) ? ` + ${Number(expense.markup_percent)}%` : ""}
+                    </small>
+                  </span>
+                  <strong>{money(expense.estimated_amount)}</strong>
+                </div>
+              ))}
+            </div>
+          </section>
+        </section>
+
+        <section className="proposal-summary-area" aria-labelledby="proposal-summary-heading">
+          <div className="proposal-section-heading">
+            <span>Proposal Summary</span>
+            <h2 id="proposal-summary-heading">Investment and Commercial Terms</h2>
+            <p>This summary identifies the proposed total, payment terms, and validity period.</p>
+          </div>
+          <div className="public-totals">
+            <div><span>Professional Fee</span><strong>{money(revision.professional_fee)}</strong></div>
+            <div><span>Estimated Materials</span><strong>{money(revision.estimated_materials)}</strong></div>
+            <div><span>Estimated Expenses</span><strong>{money(revision.estimated_expenses)}</strong></div>
+            <div><span>Estimated Total</span><strong>{money(revision.estimated_total)}</strong></div>
+          </div>
+          <div className="proposal-commercial-terms">
+            <p><strong>Payment Terms:</strong> {revision.payment_terms}</p>
+            <p><strong>Proposal Validity:</strong> {revision.validity_days} days</p>
           </div>
         </section>
 
-        {materials.length ? <section>
-          <h2>Materials</h2>
-          <div className="public-table">
-            {materials.map((material) => (
-              <div key={material.id}>
-                <span>
-                  {material.description}
-                  <small>{quantityLabel(material.quantity, material.unit)} × {money(material.unit_price)}</small>
-                </span>
-                <strong>{money(material.amount)}</strong>
-              </div>
-            ))}
-          </div>
-        </section> : null}
-
-        <section>
-          <h2>Estimated Expenses</h2>
-          <div className="public-table">
-            {expenses.map((expense) => (
-              <div key={expense.id}>
-                <span>
-                  {expense.category}{expense.description ? ` — ${expense.description}` : ""}
-                  <small>
-                    {quantityLabel(expense.estimated_quantity, expense.unit ?? "unit")} × {money(expense.estimated_rate)}
-                    {Number(expense.markup_percent) ? ` + ${Number(expense.markup_percent)}%` : ""}
-                  </small>
-                </span>
-                <strong>{money(expense.estimated_amount)}</strong>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <div className="public-totals">
-          <div><span>Professional Fee</span><strong>{money(revision.professional_fee)}</strong></div>
-          <div><span>Estimated Materials</span><strong>{money(revision.estimated_materials)}</strong></div>
-          <div><span>Estimated Expenses</span><strong>{money(revision.estimated_expenses)}</strong></div>
-          <div><span>Estimated Total</span><strong>{money(revision.estimated_total)}</strong></div>
-        </div>
-
-        <p><strong>Terms:</strong> {revision.payment_terms}</p>
-        <p><strong>Valid for:</strong> {revision.validity_days} days</p>
         <nav className="public-legal-links" aria-label="Legal information">
           <Link href="/privacy">Privacy Policy</Link>
           <Link href="/terms">Terms and Conditions</Link>

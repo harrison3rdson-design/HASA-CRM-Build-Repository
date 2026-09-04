@@ -20,6 +20,21 @@ describe("customer document previews and branding", () => {
       .toContain("hasaHorizontalLogoDataUri");
   });
 
+  it("clearly separates proposal details from the customer summary", () => {
+    const proposalDocument = source("src/components/public/proposal-document.tsx");
+    const publicCss = source("src/styles/public.css");
+    const executedProposal = source("src/lib/documents/executed-html.ts");
+
+    expect(proposalDocument).toContain('className="proposal-details-area"');
+    expect(proposalDocument).toContain('className="proposal-summary-area"');
+    expect(proposalDocument).toContain("Scope and Pricing Details");
+    expect(proposalDocument).toContain("Investment and Commercial Terms");
+    expect(publicCss).toContain(".proposal-details-area");
+    expect(publicCss).toContain(".proposal-summary-area");
+    expect(executedProposal).toContain('class="proposal-details-area"');
+    expect(executedProposal).toContain('class="proposal-summary-area"');
+  });
+
   it("packages filesystem branding assets with every serverless PDF route", () => {
     const config = source("next.config.ts");
     const invoiceRenderer = source("src/lib/invoices/render.ts");

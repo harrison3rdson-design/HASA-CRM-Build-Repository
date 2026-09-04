@@ -77,6 +77,7 @@ export async function getProjectWorkOptions(): Promise<ProjectWorkOption[]> {
         s.from("proposal_fee_items")
           .select("id,proposal_revision_id,description,billing_type,quantity,rate")
           .in("proposal_revision_id", revisionIds)
+          .eq("billing_type", "hourly")
           .order("sort_order")
       : Promise.resolve({ data: [], error: null }),
     revisionIds.length
@@ -127,7 +128,10 @@ export async function getProjectWorkOptions(): Promise<ProjectWorkOption[]> {
     ...project,
     labor_categories: [
       ...(laborResult.data ?? [])
-        .filter((item) => item.proposal_revision_id === project.source_revision_id)
+        .filter((item) => (
+          item.proposal_revision_id === project.source_revision_id
+          && item.billing_type === "hourly"
+        ))
         .map(({ proposal_revision_id: _revisionId, ...item }) => ({
           ...item,
           source_kind: "proposal" as const,

@@ -11,12 +11,36 @@ export const EXPENSE_BILLING_RULES = [
 
 export type ExpenseBillingRule = (typeof EXPENSE_BILLING_RULES)[number];
 
+export const SERVICE_BILLING_TYPES = ["hourly", "unit", "fixed", "included"] as const;
+
+export type ServiceBillingType = (typeof SERVICE_BILLING_TYPES)[number];
+
 export function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
 export function calculateLaborAmount(hours: number, hourlyRate: number): number {
   return roundMoney(hours * hourlyRate);
+}
+
+export function calculateServiceAmount(
+  billingType: ServiceBillingType,
+  quantity: number,
+  rate: number,
+): number {
+  if (billingType === "included") return 0;
+  if (billingType === "fixed") return roundMoney(rate);
+  return roundMoney(quantity * rate);
+}
+
+export function parseServiceBillingType(
+  value: FormDataEntryValue | null,
+): ServiceBillingType {
+  const billingType = String(value ?? "hourly");
+  if (!SERVICE_BILLING_TYPES.includes(billingType as ServiceBillingType)) {
+    throw new Error("Service pricing basis is invalid.");
+  }
+  return billingType as ServiceBillingType;
 }
 
 export function calculateMaterialUnitPrice(unitCost: number, markupPercent: number): number {

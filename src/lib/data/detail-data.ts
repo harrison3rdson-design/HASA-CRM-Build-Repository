@@ -112,11 +112,12 @@ export async function getProjectDetail(projectId: string) {
   await Policies.internalRead();
   const s = createAdminClient();
 
-  const [{ data: project, error }, { data: phases }, { data: time }, { data: expenses }, { data: authorizations }, { data: invoices }, { data: financial }] =
+  const [{ data: project, error }, { data: phases }, { data: time }, { data: unitServices, error: unitServicesError }, { data: expenses }, { data: authorizations }, { data: invoices }, { data: financial }] =
     await Promise.all([
       s.from("projects").select("*, client:clients(*), primary_contact:contacts(*)").eq("id", projectId).single(),
       s.from("project_phases").select("*").eq("project_id", projectId).order("sort_order"),
       s.from("time_entries").select("*, source_additional_service_labor_item:additional_service_labor_items(additional_service:additional_services(authorization_number))").eq("project_id", projectId).order("work_date", { ascending: false }).limit(50),
+      s.from("unit_service_entries").select("*, source_fee_item:proposal_fee_items(description)").eq("project_id", projectId).order("work_date", { ascending: false }).limit(50),
       s.from("expenses").select("*, source_additional_service_expense_item:additional_service_expense_items(additional_service:additional_services(authorization_number))").eq("project_id", projectId).order("expense_date", { ascending: false }).limit(50),
       s.from("additional_services").select("*, acceptances:additional_service_acceptances(*)").eq("project_id", projectId).order("created_at", { ascending: false }),
       s.from("invoices").select("*").eq("project_id", projectId).order("invoice_date", { ascending: false }),
@@ -124,23 +125,44 @@ export async function getProjectDetail(projectId: string) {
     ]);
 
   if (error) throw error;
+  if (unitServicesError) throw unitServicesError;
   let sourceAcceptance = null;
+  let unitServiceOptions: Array<{
+    id: string;
+    description: string;
+    quantity: number | string;
+    unit: string;
+    rate: number | string;
+  }> = [];
   if (project.source_revision_id) {
-    const { data, error: acceptanceError } = await s
-      .from("proposal_acceptances")
-      .select("signer_name,signer_title,signer_email,signer_mobile,accepted_at")
-      .eq("proposal_revision_id", project.source_revision_id)
-      .order("accepted_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const [
+      { data, error: acceptanceError },
+      { data: serviceOptions, error: serviceOptionsError },
+    ] = await Promise.all([
+      s.from("proposal_acceptances")
+        .select("signer_name,signer_title,signer_email,signer_mobile,accepted_at")
+        .eq("proposal_revision_id", project.source_revision_id)
+        .order("accepted_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      s.from("proposal_fee_items")
+        .select("id,description,quantity,unit,rate")
+        .eq("proposal_revision_id", project.source_revision_id)
+        .eq("billing_type", "unit")
+        .order("sort_order"),
+    ]);
     if (acceptanceError) throw acceptanceError;
+    if (serviceOptionsError) throw serviceOptionsError;
     sourceAcceptance = data;
+    unitServiceOptions = serviceOptions ?? [];
   }
   return {
     project,
     sourceAcceptance,
     phases: phases ?? [],
     time: time ?? [],
+    unitServices: unitServices ?? [],
+    unitServiceOptions,
     expenses: expenses ?? [],
     authorizations: authorizations ?? [],
     invoices: invoices ?? [],
@@ -221,7 +243,7 @@ export async function getInvoiceDetail(invoiceId: string) {
     : { data: [], error: null };
   if (priorItemsError) throw priorItemsError;
 
-  const serviceItemTypes = new Set(["professional_fee", "progress", "hourly", "travel_time", "additional_service"]);
+  const serviceItemTypes = new Set(["professional_fee", "progress", "hourly", "travel_time", "unit_service", "additional_service"]);
   const priorServiceBilled = (priorItems ?? []).reduce((sum, item) => (
     serviceItemTypes.has(item.item_type) ? sum + Number(item.amount) : sum
   ), 0);

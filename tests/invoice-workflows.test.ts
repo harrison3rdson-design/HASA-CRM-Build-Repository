@@ -8,6 +8,10 @@ const migration = readFileSync(
   "supabase/migrations/20260902200956_distinct_invoice_workflows.sql",
   "utf8",
 );
+const unitMigration = readFileSync(
+  "supabase/migrations/20260904223039_unit_priced_services.sql",
+  "utf8",
+);
 
 describe("distinct invoice workflows", () => {
   it("builds an Advance from an amount or percentage without claiming project activity", () => {
@@ -21,9 +25,18 @@ describe("distinct invoice workflows", () => {
   it("lets Progress invoices claim time, expenses, or both exactly once", () => {
     expect(form).toContain('name="include_time"');
     expect(form).toContain('name="include_expenses"');
-    expect(action).toContain('admin.rpc("build_invoice_workflow"');
+    expect(action).toContain('admin.rpc("build_invoice_workflow_v2"');
     expect(migration).toContain("invoice_item_id is null");
     expect(migration).toContain("for update");
+  });
+
+  it("claims approved per-unit work into invoices without double billing", () => {
+    expect(form).toContain('name="include_unit_work"');
+    expect(action).toContain("p_include_unit_work: includeUnitWork");
+    expect(unitMigration).toContain("create table public.unit_service_entries");
+    expect(unitMigration).toContain("claim_unbilled_unit_service_items");
+    expect(unitMigration).toContain("invoice_item_id is null");
+    expect(unitMigration).toContain("'unit_service'");
   });
 
   it("reconciles a fixed-fee Final invoice and exposes prior billings", () => {

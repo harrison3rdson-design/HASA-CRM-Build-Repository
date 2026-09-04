@@ -4,15 +4,26 @@ import { resolve } from "node:path";
 import {
   calculateExpenseAmount,
   calculateLaborAmount,
+  calculateServiceAmount,
   calculateMaterialAmount,
   calculateMaterialUnitPrice,
   parseExpenseBillingRule,
+  parseServiceBillingType,
   roundMoney,
 } from "../src/lib/proposal-items";
 
 describe("proposal item calculations", () => {
   it("calculates labor from hours and hourly rate", () => {
     expect(calculateLaborAmount(12.5, 185)).toBe(2312.5);
+  });
+
+  it("calculates hourly, per-unit, fixed-fee, and included services", () => {
+    expect(calculateServiceAmount("hourly", 12.5, 185)).toBe(2312.5);
+    expect(calculateServiceAmount("unit", 5, 250)).toBe(1250);
+    expect(calculateServiceAmount("fixed", 99, 1800)).toBe(1800);
+    expect(calculateServiceAmount("included", 99, 1800)).toBe(0);
+    expect(parseServiceBillingType("unit")).toBe("unit");
+    expect(() => parseServiceBillingType("unsupported")).toThrow(/invalid/);
   });
 
   it("applies markup only to actual-plus-markup expenses", () => {
@@ -57,7 +68,9 @@ describe("new proposal validation", () => {
 
   it("requires all labor fields only after a labor line has been started", () => {
     expect(lineItems).toContain("const laborLineStarted = Boolean");
-    expect(lineItems.match(/required=\{laborLineStarted\}/g)).toHaveLength(3);
+    expect(lineItems.match(/required=\{laborLineStarted\}/g)).toHaveLength(4);
+    expect(lineItems).toContain('<option value="unit">Per Unit</option>');
+    expect(lineItems).toContain('name={`labor_unit_${index}`}');
   });
 
   it("provides a dedicated proposal materials area without exposing cost in the customer document", () => {
@@ -85,7 +98,7 @@ describe("proposal material persistence", () => {
   it("stores materials independently and includes them in the proposal total", () => {
     expect(migration).toContain("create table public.proposal_material_items");
     expect(migration).toContain("professional_fee + estimated_materials + estimated_expenses");
-    expect(action).toContain('admin.rpc("update_proposal_revision_draft_v4"');
+    expect(action).toContain('admin.rpc("update_proposal_revision_draft_v5"');
     expect(action).toContain('copyChildren("proposal_material_items"');
   });
 

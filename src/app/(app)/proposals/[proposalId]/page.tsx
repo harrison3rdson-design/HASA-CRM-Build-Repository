@@ -16,7 +16,7 @@ import {
   selectDefaultProposalContact,
   type ProposalContactOption,
 } from "@/lib/proposal-contacts";
-import type { ExpenseBillingRule } from "@/lib/proposal-items";
+import type { ExpenseBillingRule, ServiceBillingType } from "@/lib/proposal-items";
 import { parseProposalSectionType } from "@/lib/proposal-sections";
 import { proposalRevisionLabel } from "@/lib/proposal-revisions";
 import { resolveDefaultProposalTerms } from "@/lib/proposal-terms";
@@ -36,7 +36,9 @@ type FeeRecord = {
   id: string;
   proposal_revision_id: string;
   description: string;
+  billing_type: ServiceBillingType;
   quantity: number | string | null;
+  unit: string | null;
   rate: number | string | null;
 };
 
@@ -106,6 +108,13 @@ function authorizationMethodLabel(method: AcceptanceRecord["authorization_method
   return "Electronic";
 }
 
+function serviceBillingLabel(value: string) {
+  if (value === "unit") return "Per Unit";
+  if (value === "fixed") return "Fixed Fee";
+  if (value === "included") return "Included";
+  return "Hourly";
+}
+
 export default async function ProposalDetailPage({
   params,
   searchParams,
@@ -144,6 +153,8 @@ export default async function ProposalDetailPage({
       description: fee.description,
       hours: String(fee.quantity ?? ""),
       rate: String(fee.rate ?? ""),
+      billingType: fee.billing_type,
+      unit: String(fee.unit ?? (fee.billing_type === "hourly" ? "hour" : "each")),
     })) : [];
   const expenseLines = latest ? (d.expenses as ExpenseRecord[])
     .filter((expense) => expense.proposal_revision_id === latest.id)
@@ -197,7 +208,7 @@ export default async function ProposalDetailPage({
             <h2 id="proposal-work-area-title">Build and manage {latestLabel}</h2>
             <p>{latest?.locked
               ? "This proposal version is locked because it has been sent. Create a revision to make changes."
-              : "Contact, scope, hours, rates, materials, expenses, and terms remain editable here until this version is sent."}</p>
+              : "Contact, scope, service pricing, materials, expenses, and terms remain editable here until this version is sent."}</p>
           </div>
           <div className="button-row proposal-area-actions">
           {latest && !latest.locked && !showEditor ? (
@@ -350,8 +361,8 @@ export default async function ProposalDetailPage({
           </Panel>
 
           <Panel title="Professional Fees">
-            <div className="table-wrap"><table><thead><tr><th>Description</th><th>Hours</th><th>Hourly Rate</th><th>Amount</th></tr></thead>
-            <tbody>{d.fees.filter((f:any)=>f.proposal_revision_id===latest.id).map((f:any)=><tr key={f.id}><td>{f.description}</td><td>{Number(f.quantity)}</td><td>{money(f.rate)}</td><td>{money(f.amount)}</td></tr>)}</tbody></table></div>
+            <div className="table-wrap"><table><thead><tr><th>Description</th><th>Pricing Basis</th><th>Quantity</th><th>Unit</th><th>Rate</th><th>Amount</th></tr></thead>
+            <tbody>{d.fees.filter((f:any)=>f.proposal_revision_id===latest.id).map((f:any)=><tr key={f.id}><td>{f.description}</td><td>{serviceBillingLabel(f.billing_type)}</td><td>{Number(f.quantity)}</td><td>{f.unit??"—"}</td><td>{f.billing_type==="included"?"Included":money(f.rate)}</td><td>{f.billing_type==="included"?"Included":money(f.amount)}</td></tr>)}</tbody></table></div>
           </Panel>
 
           <Panel title="Materials">

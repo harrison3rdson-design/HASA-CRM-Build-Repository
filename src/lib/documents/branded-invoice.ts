@@ -22,7 +22,7 @@ export async function generateBrandedInvoicePdf(invoiceId: string) {
 
   const logo = hasaHorizontalLogoDataUri();
   const rows=(items??[]).map((x:any)=>`<tr>
-    <td>${esc(x.description)}</td><td>${Number(x.quantity??0)}</td>
+    <td>${esc(x.description)}</td><td>${Number(x.quantity??0)} ${esc(x.unit??"item")}</td>
     <td>${money(x.rate)}</td><td>${money(x.amount)}</td></tr>`).join("");
 
   const appendix = invoice.include_receipt_appendix
@@ -47,7 +47,7 @@ export async function generateBrandedInvoicePdf(invoiceId: string) {
   <p><strong>Project:</strong> ${esc(invoice.project?.project_number)} — ${esc(invoice.project?.project_name)}<br>
   <strong>Invoice Date:</strong> ${esc(invoice.invoice_date)}<br>
   <strong>Due Date:</strong> ${esc(invoice.due_date??"")}<br><strong>Terms:</strong> ${esc(invoice.payment_terms)}</p>
-  <table><thead><tr><th>Description</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table>
+  <table><thead><tr><th>Description</th><th>Quantity</th><th>Rate</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table>
   <div class="totals"><div><span>Subtotal</span><span>${money(invoice.subtotal)}</span></div>
   <div><span>Tax</span><span>${money(invoice.tax_amount)}</span></div>
   <div><span>Total</span><span>${money(invoice.total)}</span></div>

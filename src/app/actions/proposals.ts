@@ -8,11 +8,13 @@ import { parsePaymentTerms } from "@/lib/payment-terms";
 import { parseProposalTerms, resolveDefaultProposalTerms } from "@/lib/proposal-terms";
 import {
   calculateExpenseAmount,
-  calculateLaborAmount,
   calculateMaterialAmount,
   calculateMaterialUnitPrice,
+  calculateServiceAmount,
   parseExpenseBillingRule,
+  parseServiceBillingType,
   roundMoney,
+  type ServiceBillingType,
 } from "@/lib/proposal-items";
 import { parseProposalSectionType } from "@/lib/proposal-sections";
 import { selectDefaultProposalContact } from "@/lib/proposal-contacts";
@@ -68,8 +70,9 @@ function itemCount(value: FormDataEntryValue | null, label: string): number {
 function parseProposalItems(formData: FormData) {
   const feeItems = [] as Array<{
     description: string;
-    billing_type: "hourly";
+    billing_type: ServiceBillingType;
     quantity: number;
+    unit: string;
     rate: number;
     amount: number;
     sort_order: number;
@@ -100,18 +103,38 @@ function parseProposalItems(formData: FormData) {
   const laborCount = itemCount(formData.get("labor_count"), "Labor line count");
   for (let index = 0; index < laborCount; index += 1) {
     const description = optionalText(formData.get(`labor_description_${index}`));
-    const hoursText = optionalText(formData.get(`labor_hours_${index}`));
+    const quantityText = optionalText(formData.get(`labor_hours_${index}`));
     const rateText = optionalText(formData.get(`labor_rate_${index}`));
-    if (!description && !hoursText && !rateText) continue;
+    if (!description && !quantityText && !rateText) continue;
 
-    const hours = roundHoursUp(numberValue(hoursText, `Labor line ${index + 1} hours`, { min: 0 }));
-    const rate = numberValue(rateText, `Labor line ${index + 1} hourly rate`, { min: 0 });
+    const billingType = parseServiceBillingType(formData.get(`labor_billing_type_${index}`));
+    const enteredQuantity = numberValue(
+      quantityText ?? (billingType === "fixed" || billingType === "included" ? "1" : null),
+      `Service line ${index + 1} quantity`,
+      { min: 0.001 },
+    );
+    const quantity = billingType === "hourly"
+      ? roundHoursUp(enteredQuantity)
+      : billingType === "fixed" || billingType === "included"
+        ? 1
+        : enteredQuantity;
+    const rate = billingType === "included"
+      ? 0
+      : numberValue(rateText, `Service line ${index + 1} rate`, { min: 0 });
+    const unit = billingType === "hourly"
+      ? "hour"
+      : billingType === "fixed"
+        ? "project"
+        : billingType === "included"
+          ? "included"
+          : requiredText(formData.get(`labor_unit_${index}`), `Service line ${index + 1} unit`);
     feeItems.push({
-      description: requiredText(description, `Labor line ${index + 1} description`),
-      billing_type: "hourly",
-      quantity: hours,
+      description: requiredText(description, `Service line ${index + 1} description`),
+      billing_type: billingType,
+      quantity,
+      unit,
       rate,
-      amount: calculateLaborAmount(hours, rate),
+      amount: calculateServiceAmount(billingType, quantity, rate),
       sort_order: index,
     });
   }
@@ -457,7 +480,7 @@ export async function updateProposalRevisionAction(formData: FormData) {
   const scopeSections = parseProposalSections(formData);
   const { feeItems, expenseItems, materialItems } = parseProposalItems(formData);
 
-  const { data: proposalId, error } = await admin.rpc("update_proposal_revision_draft_v4", {
+  const { data: proposalId, error } = await admin.rpc("update_proposal_revision_draft_v5", {
     p_revision_id: revisionId,
     p_payment_terms: paymentTerms,
     p_validity_days: validityDays,

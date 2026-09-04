@@ -36,6 +36,7 @@ const PUBLIC_TABLES = [
   "proposals",
   "receipt_inbox",
   "time_entries",
+  "unit_service_entries",
 ];
 
 const PAGE_SIZE = 1_000;

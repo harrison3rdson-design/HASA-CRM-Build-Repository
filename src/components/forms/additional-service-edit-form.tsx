@@ -74,7 +74,12 @@ export function AdditionalServiceEditForm({
         </select>
       </label>
       <div className="project-context"><span>Current Authorized Amount</span><strong>{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(authorization.authorized_amount))}</strong><small>Recalculated from the itemized lines when saved.</small></div>
-      <ProposalLineItemsFields initialLaborLines={laborLines} initialExpenseLines={expenseLines} totalLabel="Authorized Amount" />
+      <ProposalLineItemsFields
+        initialLaborLines={laborLines}
+        initialExpenseLines={expenseLines}
+        totalLabel="Authorized Amount"
+        allowServicePricing={false}
+      />
       <div className="full button-row">
         <button className="primary-button" type="submit">Save Authorization</button>
         <Link className="secondary-button" href={`/projects/${authorization.project_id}`}>Back to Project</Link>

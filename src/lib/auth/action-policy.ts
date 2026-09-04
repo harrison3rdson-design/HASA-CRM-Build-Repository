@@ -9,6 +9,7 @@ export const Policies = {
   proposalSend: () => requireRole(["owner_admin","project_manager"]),
   projectWrite: () => requireRole(["owner_admin","project_manager"]),
   timeOwn: () => requireRole(["owner_admin","project_manager","staff"]),
+  unitServiceOwn: () => requireRole(["owner_admin","project_manager","staff"]),
   expenseWrite: () => requireRole(["owner_admin","project_manager","staff","accounting"]),
   invoiceCreate: () => requireRole(["owner_admin","project_manager","accounting"]),
   invoiceWrite: () => requireRole(["owner_admin","accounting"]),

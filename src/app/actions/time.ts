@@ -53,9 +53,10 @@ async function approvedLaborSnapshot(supabase: any, projectId: string, formData:
 
   const { data: feeItem, error: feeError } = await supabase
     .from("proposal_fee_items")
-    .select("id,description,rate")
+    .select("id,description,rate,billing_type")
     .eq("id", sourceId)
     .eq("proposal_revision_id", project.source_revision_id)
+    .eq("billing_type", "hourly")
     .maybeSingle();
   if (feeError) throw feeError;
   if (!feeItem) throw new Error("The selected labor category is not part of this project's accepted proposal.");

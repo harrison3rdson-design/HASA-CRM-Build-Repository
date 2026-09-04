@@ -31,7 +31,9 @@ type ProposalDocumentProps = {
   fees: Array<{
     id: string;
     description: string;
+    billing_type: string;
     quantity: number | string | null;
+    unit: string;
     rate: number | string | null;
     amount: number | string | null;
   }>;
@@ -64,6 +66,13 @@ function quantityLabel(value: number | string | null, unit: string) {
   const quantity = Number(value ?? 0);
   const label = quantity === 1 ? unit : `${unit}s`;
   return `${quantity} ${label}`;
+}
+
+function servicePriceDetail(fee: ProposalDocumentProps["fees"][number]) {
+  if (fee.billing_type === "included") return "Included in professional fee";
+  if (fee.billing_type === "fixed") return `Fixed fee · ${money(fee.rate)}`;
+  const basis = fee.billing_type === "hourly" ? "Hourly" : "Per unit";
+  return `${basis} · ${Number(fee.quantity ?? 0)} ${fee.unit} × ${money(fee.rate)}`;
 }
 
 export function ProposalDocument({
@@ -116,7 +125,7 @@ export function ProposalDocument({
               <div key={fee.id}>
                 <span>
                   {fee.description}
-                  <small>{quantityLabel(fee.quantity, "hour")} × {money(fee.rate)}</small>
+                  <small>{servicePriceDetail(fee)}</small>
                 </span>
                 <strong>{money(fee.amount)}</strong>
               </div>

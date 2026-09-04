@@ -24,7 +24,7 @@
 .line-items-heading p{margin:4px 0 0;font-size:12px;color:var(--muted)}
 .line-items-list{display:grid;gap:10px}
 .line-item{position:relative;display:grid;gap:10px;padding:14px 78px 14px 14px;border:1px solid var(--border);border-radius:10px;background:#fafafa}
-.labor-line{grid-template-columns:minmax(220px,2fr) minmax(90px,.65fr) minmax(110px,.8fr) minmax(110px,.7fr)}
+.labor-line{grid-template-columns:minmax(190px,1.6fr) minmax(115px,.8fr) minmax(85px,.55fr) minmax(100px,.65fr) minmax(110px,.75fr) minmax(105px,.65fr)}
 .scope-line{grid-template-columns:minmax(160px,.65fr) minmax(220px,1fr)}
 .scope-content{grid-column:1/-1}
 .expense-line,.material-line{grid-template-columns:repeat(4,minmax(100px,1fr))}

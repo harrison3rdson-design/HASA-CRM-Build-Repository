@@ -16,7 +16,7 @@ export function AdditionalServiceForm({ projectId }: { projectId: string }) {
         </select>
       </label>
       <div className="project-context"><span>Authorized Amount</span><strong>Calculated below</strong><small>Labor and estimated expenses are added automatically.</small></div>
-      <ProposalLineItemsFields totalLabel="Authorized Amount" />
+      <ProposalLineItemsFields totalLabel="Authorized Amount" allowServicePricing={false} />
       <p className="full footnote">This creates an editable draft. You can preview it before choosing Email or Text and sending it for customer approval.</p>
       <div className="full"><button className="primary-button" type="submit">Create Draft Authorization</button></div>
     </form>

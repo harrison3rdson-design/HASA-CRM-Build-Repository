@@ -123,13 +123,14 @@ export function InvoiceForm({
         <legend>Progress billing</legend>
         <p>Choose which completed, unbilled project activity to include. Each included entry is reserved so it cannot be billed twice.</p>
         <label className="check"><input name="include_time" type="checkbox" defaultChecked /> Include unbilled time</label>
+        <label className="check"><input name="include_unit_work" type="checkbox" defaultChecked /> Include unbilled per-unit work</label>
         <label className="check"><input name="include_expenses" type="checkbox" defaultChecked /> Include unbilled expenses and materials</label>
       </fieldset> : null}
       {invoiceType === "final" ? <div className="billing-workflow full" role="note">
         <strong>Final project closeout</strong>
         <p>{selectedProject?.billing_method === "fixed_fee" || selectedProject?.billing_method === "milestone"
-          ? "Bills the remaining authorized service balance, includes all remaining billable expenses and materials, and records unbilled time as included fixed-fee detail. Prior non-void invoices are deducted automatically."
-          : "Bills all remaining unbilled time, expenses, and materials. Prior non-void invoices remain visible in the reconciliation."}</p>
+          ? "Bills the remaining authorized service balance, includes all remaining billable expenses and materials, and records unbilled time and per-unit work as included fixed-fee detail. Prior non-void invoices are deducted automatically."
+          : "Bills all remaining unbilled time, per-unit work, expenses, and materials. Prior non-void invoices remain visible in the reconciliation."}</p>
       </div> : null}
       <label className="check"><input name="include_expense_detail" type="checkbox" /> Include Expense Detail</label>
       <label className="check"><input name="include_receipt_appendix" type="checkbox" /> Include Receipt Appendix</label>

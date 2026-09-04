@@ -47,6 +47,7 @@ export interface InvoiceDocumentModel {
   items: Array<{
     description: string;
     quantity: number;
+    unit?: string;
     rate: number;
     amount: number;
   }>;

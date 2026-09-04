@@ -20,6 +20,7 @@ export async function createInvoiceAction(formData: FormData) {
 
   const includeTime = invoiceType === "final" || boolValue(formData.get("include_time"));
   const includeExpenses = invoiceType === "final" || boolValue(formData.get("include_expenses"));
+  const includeUnitWork = invoiceType === "final" || boolValue(formData.get("include_unit_work"));
   const advanceMethod = invoiceType === "advance"
     ? requiredText(formData.get("advance_method"), "Advance calculation")
     : null;
@@ -33,8 +34,8 @@ export async function createInvoiceAction(formData: FormData) {
   if (invoiceType === "advance" && advanceMethod === "percentage" && Number(advanceValue) > 100) {
     throw new Error("Advance percentage cannot exceed 100.");
   }
-  if (invoiceType === "progress" && !includeTime && !includeExpenses) {
-    throw new Error("Choose unbilled time, unbilled expenses and materials, or both.");
+  if (invoiceType === "progress" && !includeTime && !includeExpenses && !includeUnitWork) {
+    throw new Error("Choose unbilled time, per-unit work, expenses and materials, or a combination.");
   }
 
   const { data: project, error: projectError } = await admin
@@ -92,10 +93,11 @@ export async function createInvoiceAction(formData: FormData) {
 
   if (error) throw error;
 
-  const { error: buildError } = await admin.rpc("build_invoice_workflow", {
+  const { error: buildError } = await admin.rpc("build_invoice_workflow_v2", {
     p_invoice_id: data.id,
     p_include_time: includeTime,
     p_include_expenses: includeExpenses,
+    p_include_unit_work: includeUnitWork,
     p_advance_method: advanceMethod,
     p_advance_value: advanceValue,
   });

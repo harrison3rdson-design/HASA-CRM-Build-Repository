@@ -65,9 +65,9 @@ export default async function InvoiceDetailPage({
       ) : null}
 
       <Panel title="Line Items">
-        {d.items.length ? <div className="table-wrap"><table><thead><tr><th>Description</th><th>Type</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
-        <tbody>{d.items.map((i:any)=><tr key={i.id}><td>{i.description}</td><td>{i.item_type}</td><td>{i.quantity}</td><td>{money(i.rate)}</td><td>{money(i.amount)}</td></tr>)}</tbody></table></div>
-        : <p className="muted">No unbilled time or expenses were available. This draft has no line items yet.</p>}
+        {d.items.length ? <div className="table-wrap"><table><thead><tr><th>Description</th><th>Type</th><th>Quantity</th><th>Rate</th><th>Amount</th></tr></thead>
+        <tbody>{d.items.map((i:any)=><tr key={i.id}><td>{i.description}</td><td>{String(i.item_type).replaceAll("_"," ")}</td><td>{i.quantity} {i.unit??"item"}</td><td>{money(i.rate)}</td><td>{money(i.amount)}</td></tr>)}</tbody></table></div>
+        : <p className="muted">No unbilled time, per-unit work, or expenses were available. This draft has no line items yet.</p>}
       </Panel>
 
       {d.invoice.invoice_type === "final" ? <Panel title="Final Invoice Reconciliation">

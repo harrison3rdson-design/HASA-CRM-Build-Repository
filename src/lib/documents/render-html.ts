@@ -149,7 +149,7 @@ export function renderInvoiceHtml(model: InvoiceDocumentModel): string {
       ${model.items.map(i => `
         <tr>
           <td>${esc(i.description)}</td>
-          <td class="right">${i.quantity}</td>
+          <td class="right">${i.quantity} ${esc(i.unit ?? "item")}</td>
           <td class="right">${money(i.rate)}</td>
           <td class="right">${money(i.amount)}</td>
         </tr>`).join("")}

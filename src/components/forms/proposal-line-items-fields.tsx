@@ -3,11 +3,12 @@
 import { useId, useMemo, useRef, useState } from "react";
 import {
   calculateExpenseAmount,
-  calculateLaborAmount,
+  calculateServiceAmount,
   calculateMaterialAmount,
   calculateMaterialUnitPrice,
   EXPENSE_BILLING_RULES,
   type ExpenseBillingRule,
+  type ServiceBillingType,
 } from "@/lib/proposal-items";
 
 export type LaborLineValue = {
@@ -15,6 +16,8 @@ export type LaborLineValue = {
   description: string;
   hours: string;
   rate: string;
+  billingType?: ServiceBillingType;
+  unit?: string;
 };
 
 export type ExpenseLineValue = {
@@ -63,7 +66,14 @@ function currency(value: number): string {
 }
 
 function blankLaborLine(id: string): LaborLineValue {
-  return { id, description: "", hours: "", rate: "" };
+  return {
+    id,
+    description: "",
+    hours: "",
+    rate: "",
+    billingType: "hourly",
+    unit: "hour",
+  };
 }
 
 function blankExpenseLine(id: string): ExpenseLineValue {
@@ -96,11 +106,13 @@ export function ProposalLineItemsFields({
   initialExpenseLines = EMPTY_EXPENSE_LINES,
   initialMaterialLines = EMPTY_MATERIAL_LINES,
   totalLabel = "Estimated Proposal Total",
+  allowServicePricing = true,
 }: {
   initialLaborLines?: LaborLineValue[];
   initialExpenseLines?: ExpenseLineValue[];
   initialMaterialLines?: MaterialLineValue[];
   totalLabel?: string;
+  allowServicePricing?: boolean;
 }) {
   const headingPrefix = useId();
   const nextId = useRef(1);
@@ -116,10 +128,14 @@ export function ProposalLineItemsFields({
 
   const laborTotal = useMemo(
     () => laborLines.reduce(
-      (sum, line) => sum + calculateLaborAmount(numericValue(line.hours), numericValue(line.rate)),
+      (sum, line) => sum + calculateServiceAmount(
+        allowServicePricing ? line.billingType ?? "hourly" : "hourly",
+        numericValue(line.hours),
+        numericValue(line.rate),
+      ),
       0,
     ),
-    [laborLines],
+    [allowServicePricing, laborLines],
   );
   const expenseTotal = useMemo(
     () => expenseLines.reduce(
@@ -161,7 +177,9 @@ export function ProposalLineItemsFields({
         <div className="line-items-heading">
           <div>
             <h2 id={`${headingPrefix}-labor`}>Services and Labor</h2>
-            <p>Break down the estimated hours and hourly rate for each service.</p>
+            <p>{allowServicePricing
+              ? "Price each service by hour, unit, fixed fee, or as included work."
+              : "Break down the estimated hours and hourly rate for each service."}</p>
           </div>
           <button
             className="secondary-button"
@@ -171,14 +189,36 @@ export function ProposalLineItemsFields({
               blankLaborLine(`labor-new-${nextId.current++}`),
             ])}
           >
-            Add Labor Line
+            Add Service Line
           </button>
         </div>
         <input type="hidden" name="labor_count" value={laborLines.length} />
         <div className="line-items-list">
           {laborLines.map((line, index) => {
-            const amount = calculateLaborAmount(numericValue(line.hours), numericValue(line.rate));
-            const laborLineStarted = Boolean(line.description.trim() || line.hours || line.rate);
+            const billingType = allowServicePricing ? line.billingType ?? "hourly" : "hourly";
+            const amount = calculateServiceAmount(
+              billingType,
+              numericValue(line.hours),
+              numericValue(line.rate),
+            );
+            const laborLineStarted = Boolean(
+              line.description.trim()
+              || line.rate
+              || (line.hours && line.hours !== "1")
+              || billingType !== "hourly",
+            );
+            const quantityLabel = billingType === "hourly"
+              ? "Hours"
+              : billingType === "unit"
+                ? "Quantity"
+                : "Quantity";
+            const rateLabel = billingType === "hourly"
+              ? "Hourly Rate"
+              : billingType === "unit"
+                ? "Unit Rate"
+                : billingType === "fixed"
+                  ? "Fixed Fee"
+                  : "Rate";
             return (
               <div className="line-item labor-line" key={line.id}>
                 <label>
@@ -191,21 +231,64 @@ export function ProposalLineItemsFields({
                     placeholder="Design services"
                   />
                 </label>
+                {allowServicePricing ? <label>
+                  Pricing Basis
+                  <select
+                    name={`labor_billing_type_${index}`}
+                    value={billingType}
+                    onChange={(event) => {
+                      const nextType = event.target.value as ServiceBillingType;
+                      updateLaborLine(line.id, {
+                        billingType: nextType,
+                        hours: nextType === "fixed" || nextType === "included"
+                          ? "1"
+                          : line.hours,
+                        unit: nextType === "hourly"
+                          ? "hour"
+                          : nextType === "fixed"
+                            ? "project"
+                            : nextType === "included"
+                              ? "included"
+                              : line.unit === "hour" || !line.unit
+                                ? "each"
+                                : line.unit,
+                        rate: nextType === "included" ? "0" : line.rate,
+                      });
+                    }}
+                  >
+                    <option value="hourly">Hourly</option>
+                    <option value="unit">Per Unit</option>
+                    <option value="fixed">Fixed Fee</option>
+                    <option value="included">Included</option>
+                  </select>
+                </label> : null}
                 <label>
-                  Hours
+                  {quantityLabel}
                   <input
                     name={`labor_hours_${index}`}
                     type="number"
-                    min="0"
-                    step="0.5"
+                    min={billingType === "hourly" ? "0.5" : "0.001"}
+                    step={billingType === "hourly" ? "0.5" : "0.001"}
                     value={line.hours}
                     required={laborLineStarted}
+                    readOnly={billingType === "fixed" || billingType === "included"}
                     onChange={(event) => updateLaborLine(line.id, { hours: event.target.value })}
                     placeholder="0"
                   />
                 </label>
+                {allowServicePricing ? <label>
+                  Unit
+                  <input
+                    name={`labor_unit_${index}`}
+                    value={line.unit ?? (billingType === "hourly" ? "hour" : "each")}
+                    required={laborLineStarted}
+                    readOnly={billingType !== "unit"}
+                    onChange={(event) => updateLaborLine(line.id, { unit: event.target.value })}
+                    placeholder="floorplan, point, device"
+                  />
+                </label> : null}
                 <label>
-                  Hourly Rate
+                  {rateLabel}
                   <input
                     name={`labor_rate_${index}`}
                     type="number"
@@ -213,17 +296,21 @@ export function ProposalLineItemsFields({
                     step="0.01"
                     value={line.rate}
                     required={laborLineStarted}
+                    readOnly={billingType === "included"}
                     onChange={(event) => updateLaborLine(line.id, { rate: event.target.value })}
                     placeholder="$0.00"
                   />
                 </label>
-                <div className="line-item-amount"><span>Amount</span><strong>{currency(amount)}</strong></div>
+                <div className="line-item-amount">
+                  <span>{billingType === "included" ? "Included" : "Amount"}</span>
+                  <strong>{billingType === "included" ? "Included" : currency(amount)}</strong>
+                </div>
                 <button
                   className="text-button remove-line"
                   type="button"
                   onClick={() => setLaborLines((lines) => lines.filter((candidate) => candidate.id !== line.id))}
                   disabled={laborLines.length === 1}
-                  aria-label={`Remove labor line ${index + 1}`}
+                  aria-label={`Remove service line ${index + 1}`}
                 >
                   Remove
                 </button>

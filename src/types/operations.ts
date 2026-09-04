@@ -64,6 +64,7 @@ export interface ProjectFinancialSummary {
   authorized_fee: number;
   total_hours_worked: number;
   billable_time_value: number;
+  billable_unit_value: number;
   internal_labor_cost: number;
   actual_expenses: number;
   billable_expenses: number;

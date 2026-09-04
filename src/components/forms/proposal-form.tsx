@@ -116,7 +116,9 @@ export function ProposalForm({
           <option value="hourly">Hourly</option>
           <option value="milestone">Milestone</option>
           <option value="time_and_materials">Time and materials</option>
+          <option value="unit_priced">Unit-priced / mixed services</option>
         </select>
+        <span>Choose Unit-priced / mixed when actual completed quantities determine the final service fee.</span>
       </label>
 
       <ProposalScopeFields />

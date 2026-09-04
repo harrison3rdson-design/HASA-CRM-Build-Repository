@@ -19,7 +19,7 @@ export function executedProposalHtml(data: any, signer: any) {
   ).join("");
 
   const fees = (data.fees ?? []).map((f:any) =>
-    `<tr><td>${escapeHtml(f.description)}</td><td>${escapeHtml(f.quantity)}</td><td>${money(f.rate)}</td><td>${money(f.amount)}</td></tr>`
+    `<tr><td>${escapeHtml(f.description)}</td><td>${escapeHtml(serviceBillingLabel(f.billing_type))}</td><td>${escapeHtml(f.quantity)} ${escapeHtml(f.unit ?? "")}</td><td>${f.billing_type === "included" ? "Included" : money(f.rate)}</td><td>${f.billing_type === "included" ? "Included" : money(f.amount)}</td></tr>`
   ).join("");
 
   const expenses = (data.expenses ?? []).map((e:any) =>
@@ -44,7 +44,7 @@ export function executedProposalHtml(data: any, signer: any) {
     <h2>${escapeHtml(data.proposal.project_name)}</h2>
     <p>Client: ${escapeHtml(data.proposal.client?.company_name ?? "")}</p>
     ${sections}
-    <h2>Professional Fees</h2><table><thead><tr><td>Description</td><td>Hours</td><td>Rate</td><td>Amount</td></tr></thead><tbody>${fees}</tbody></table>
+    <h2>Professional Fees</h2><table><thead><tr><td>Description</td><td>Pricing Basis</td><td>Quantity</td><td>Rate</td><td>Amount</td></tr></thead><tbody>${fees}</tbody></table>
     ${materials ? `<h2>Materials</h2><table><thead><tr><td>Description</td><td>Quantity</td><td>Bid Unit Price</td><td>Amount</td></tr></thead><tbody>${materials}</tbody></table>` : ""}
     <h2>Estimated Expenses</h2><table><thead><tr><td>Category</td><td>Description</td><td>Quantity</td><td>Unit Cost</td><td>Estimate</td></tr></thead><tbody>${expenses}</tbody></table>
     <p><strong>Professional Fee:</strong> ${money(data.revision.professional_fee)}<br>
@@ -94,4 +94,11 @@ function escapeHtml(v: any) {
   return String(v ?? "").replace(/[&<>"']/g, c => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
   }[c] as string));
+}
+
+function serviceBillingLabel(value: any) {
+  if (value === "unit") return "Per Unit";
+  if (value === "fixed") return "Fixed Fee";
+  if (value === "included") return "Included";
+  return "Hourly";
 }

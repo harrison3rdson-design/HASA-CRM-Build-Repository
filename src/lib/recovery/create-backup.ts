@@ -37,6 +37,7 @@ export const RECOVERY_TABLES = [
   "proposals",
   "receipt_inbox",
   "time_entries",
+  "unit_service_entries",
 ] as const;
 
 const PAGE_SIZE = 1_000;

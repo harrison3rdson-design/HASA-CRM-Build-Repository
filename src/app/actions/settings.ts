@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Policies } from "@/lib/auth/action-policy";
 import { requiredText, optionalText } from "@/lib/validation/common";
 import { parsePaymentTerms } from "@/lib/payment-terms";
+import { parseProposalTerms } from "@/lib/proposal-terms";
 
 export type SettingsActionState = {
   status: "idle" | "success" | "error";
@@ -34,6 +35,7 @@ export async function updateCompanySettingsAction(
         email: optionalText(formData.get("email")),
         website: optionalText(formData.get("website")),
         default_payment_terms: parsePaymentTerms(formData.get("default_payment_terms"), "Default payment terms"),
+        default_proposal_terms: parseProposalTerms(formData.get("default_proposal_terms")),
         default_currency: requiredText(formData.get("default_currency"), "Currency"),
         logo_horizontal_path: optionalText(formData.get("logo_horizontal_path")),
         logo_square_path: optionalText(formData.get("logo_square_path")),

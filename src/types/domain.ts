@@ -42,6 +42,7 @@ export interface ProposalRevision {
   estimated_materials: number;
   estimated_total: number;
   payment_terms: string;
+  proposal_terms?: string | null;
   validity_days: number;
   locked: boolean;
 }

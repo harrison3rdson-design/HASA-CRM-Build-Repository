@@ -28,6 +28,7 @@ export function ProposalRevisionForm({
     id: string;
     revision_number: number;
     payment_terms: PaymentTerms;
+    proposal_terms: string;
     validity_days: number;
     billing_method: string | null;
   };
@@ -72,6 +73,12 @@ export function ProposalRevisionForm({
         initialExpenseLines={expenseLines}
         initialMaterialLines={materialLines}
       />
+
+      <label className="full">
+        Proposal Terms and Conditions
+        <textarea name="proposal_terms" rows={30} defaultValue={revision.proposal_terms} required />
+        <span>These terms appear as the final section of the customer proposal and become permanent when this version is sent.</span>
+      </label>
 
       <div className="full button-row">
         <button className="primary-button" type="submit">Save {revisionLabel}</button>

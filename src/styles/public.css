@@ -25,6 +25,7 @@ body{margin:0;background:var(--public-bg);color:var(--public-text);font-family:A
 .public-acceptance-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .public-preview-pill{padding:5px 9px;border-radius:999px;background:#edf7ff;color:#24567d;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
 .public-legal-links{display:flex;gap:14px;margin-top:24px;padding-top:16px;border-top:1px solid var(--public-border);font-size:12px;font-weight:700}.public-legal-links a{text-decoration:underline;text-underline-offset:3px}
+.proposal-terms-page{break-before:page;page-break-before:always}.proposal-terms-text{margin-top:20px;white-space:pre-wrap;font-size:12px;line-height:1.55}
 .public-acceptance-card fieldset{display:grid;gap:12px;margin:0;padding:0;border:0}
 .public-acceptance-card fieldset:disabled{opacity:.68}
 .public-error{display:grid;gap:4px;padding:12px 14px;border:1px solid #f0aaa6;border-radius:10px;background:#fff2f0;color:#8f1d18;font-size:13px;line-height:1.4}

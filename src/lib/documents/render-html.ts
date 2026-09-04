@@ -68,6 +68,11 @@ ${body}
 }
 
 export function renderProposalHtml(model: ProposalDocumentModel): string {
+  const proposalTermsSection = model.proposalTerms
+    ? '<section style="page-break-before:always"><h1>Proposal Terms and Conditions</h1><div>'
+      + esc(model.proposalTerms).replaceAll("\n", "<br>")
+      + "</div></section>"
+    : "";
   const body = `
     <h1>Statement of Work</h1>
     <div class="grid">
@@ -114,7 +119,8 @@ export function renderProposalHtml(model: ProposalDocumentModel): string {
     <p><strong>Payment Terms:</strong> ${esc(model.paymentTerms)}<br>
     <strong>Proposal Validity:</strong> ${model.validityDays} days</p>
 
-    <footer>${esc(model.branding.proposalFooter ?? model.branding.legalName)}</footer>`;
+    <footer>${esc(model.branding.proposalFooter ?? model.branding.legalName)}</footer>
+    ${proposalTermsSection}`;
 
   return shell(`Proposal ${model.proposalNumber}`, body, model.branding);
 }

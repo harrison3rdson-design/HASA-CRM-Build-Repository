@@ -19,6 +19,7 @@ import {
 import type { ExpenseBillingRule } from "@/lib/proposal-items";
 import { parseProposalSectionType } from "@/lib/proposal-sections";
 import { proposalRevisionLabel } from "@/lib/proposal-revisions";
+import { resolveDefaultProposalTerms } from "@/lib/proposal-terms";
 import { dateTime, money } from "@/lib/ui/format";
 import { isTwilioConfigured } from "@/lib/messaging/twilio";
 import { isTransactionalEmailConfigured } from "@/lib/messaging/email";
@@ -263,6 +264,9 @@ export default async function ProposalDetailPage({
                 id: latest.id,
                 revision_number: latest.revision_number,
                 payment_terms: parsePaymentTerms(latest.payment_terms),
+                proposal_terms: resolveDefaultProposalTerms(
+                  latest.proposal_terms ?? d.companyDefaultProposalTerms,
+                ),
                 validity_days: latest.validity_days,
                 billing_method: latest.billing_method,
               }}
@@ -358,6 +362,15 @@ export default async function ProposalDetailPage({
           <Panel title="Estimated Expenses">
             <div className="table-wrap"><table><thead><tr><th>Category</th><th>Description</th><th>Qty</th><th>Unit</th><th>Unit Cost</th><th>Markup</th><th>Rule</th><th>Estimate</th></tr></thead>
             <tbody>{d.expenses.filter((e:any)=>e.proposal_revision_id===latest.id).map((e:any)=><tr key={e.id}><td>{e.category}</td><td>{e.description??"—"}</td><td>{Number(e.estimated_quantity)}</td><td>{e.unit??"—"}</td><td>{money(e.estimated_rate)}</td><td>{Number(e.markup_percent)}%</td><td>{String(e.billing_rule).replaceAll("_", " ")}</td><td>{money(e.estimated_amount)}</td></tr>)}</tbody></table></div>
+          </Panel>
+
+          <Panel title="Proposal Terms and Conditions">
+            <p className="preline">
+              {latest.proposal_terms
+                ?? (!latest.locked
+                  ? resolveDefaultProposalTerms(d.companyDefaultProposalTerms)
+                  : "No proposal-specific terms were included with this legacy version.")}
+            </p>
           </Panel>
         </> : null}
       </section>

@@ -31,6 +31,7 @@ export interface ProposalDocumentModel {
   estimatedTotal: number;
   paymentTerms: string;
   validityDays: number;
+  proposalTerms?: string;
   branding: CompanyBranding;
 }
 

@@ -4,6 +4,16 @@ import { hasaHorizontalLogoDataUri } from "@/lib/branding/assets";
 
 export function executedProposalHtml(data: any, signer: any) {
   const hasaLogoDataUri = hasaHorizontalLogoDataUri();
+  const proposalTerms = escapeHtml(data.revision.proposal_terms ?? "").replace(/\n/g, "<br>");
+  const proposalTermsSection = proposalTerms
+    ? '<section class="proposal-terms"><h1>Proposal Terms and Conditions</h1><p>Incorporated into Proposal #'
+      + escapeHtml(data.proposal.proposal_number)
+      + " · "
+      + escapeHtml(proposalRevisionLabel(data.revision.revision_number))
+      + "</p><p>"
+      + proposalTerms
+      + "</p></section>"
+    : "";
   const sections = (data.sections ?? []).map((s:any) =>
     `<section><h2>${escapeHtml(s.heading ?? s.section_type)}</h2><p>${escapeHtml(s.content ?? "").replace(/\n/g,"<br>")}</p></section>`
   ).join("");
@@ -27,6 +37,7 @@ export function executedProposalHtml(data: any, signer: any) {
     h1{font-size:20pt;margin:0}h2{font-size:13pt;margin-top:20px}
     table{width:100%;border-collapse:collapse}td{padding:6px;border-bottom:1px solid #ddd}
     td:last-child{text-align:right}.accept{margin-top:28px;border-top:1px solid #999;padding-top:14px}
+    .proposal-terms{page-break-before:always}.proposal-terms p{font-size:9pt;line-height:1.45}
   </style></head><body>
     <header><img src="${hasaLogoDataUri}" alt="HASA Concepts">
     <div class="document-meta"><h1>STATEMENT OF WORK</h1><div>Proposal #${escapeHtml(data.proposal.proposal_number)} · ${escapeHtml(proposalRevisionLabel(data.revision.revision_number))}</div></div></header>
@@ -44,6 +55,7 @@ export function executedProposalHtml(data: any, signer: any) {
     <div class="accept"><strong>Electronically Accepted</strong><br>
     ${escapeHtml(signer.signerName)}${signer.signerTitle ? `, ${escapeHtml(signer.signerTitle)}` : ""}<br>
     ${new Date().toISOString()}</div>
+    ${proposalTermsSection}
   </body></html>`;
 }
 

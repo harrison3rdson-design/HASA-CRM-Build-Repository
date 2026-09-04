@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { money } from "@/lib/ui/format";
 import { proposalRevisionLabel } from "@/lib/proposal-revisions";
+import { resolveDefaultProposalTerms } from "@/lib/proposal-terms";
 
 type ProposalDocumentProps = {
   revision: {
@@ -12,6 +13,8 @@ type ProposalDocumentProps = {
     estimated_total: number | string | null;
     payment_terms: string;
     validity_days: number | string;
+    proposal_terms?: string | null;
+    locked: boolean;
   };
   proposal: {
     proposal_number: string;
@@ -53,6 +56,7 @@ type ProposalDocumentProps = {
   company: {
     display_name: string;
     legal_name: string;
+    default_proposal_terms?: string | null;
   };
 };
 
@@ -71,6 +75,9 @@ export function ProposalDocument({
   materials,
   company,
 }: ProposalDocumentProps) {
+  const proposalTerms = revision.proposal_terms
+    ?? (revision.locked ? "" : resolveDefaultProposalTerms(company.default_proposal_terms));
+
   return (
     <>
       <header className="public-header">
@@ -164,6 +171,15 @@ export function ProposalDocument({
           <Link href="/terms">Terms and Conditions</Link>
         </nav>
       </article>
+      {proposalTerms ? (
+        <article className="public-document proposal-terms-page">
+          <h1>Proposal Terms and Conditions</h1>
+          <p className="public-muted">
+            Incorporated into Proposal #{proposal.proposal_number} · {proposalRevisionLabel(revision.revision_number)}
+          </p>
+          <div className="proposal-terms-text">{proposalTerms}</div>
+        </article>
+      ) : null}
     </>
   );
 }

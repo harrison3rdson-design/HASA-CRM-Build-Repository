@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { requiredText, optionalText, numberValue, boolValue } from "@/lib/validation/common";
 import { parsePaymentTerms } from "@/lib/payment-terms";
+import { parseProposalTerms, resolveDefaultProposalTerms } from "@/lib/proposal-terms";
 import {
   calculateExpenseAmount,
   calculateLaborAmount,
@@ -267,15 +268,14 @@ export async function createProposalAction(
     ?? selectDefaultProposalContact(clientContacts ?? [])?.id
     ?? null;
 
-  if (!paymentTerms) {
-    const { data: settings, error: settingsError } = await supabase
-      .from("company_settings")
-      .select("default_payment_terms")
-      .limit(1)
-      .single();
-    if (settingsError) throw settingsError;
-    paymentTerms = settings.default_payment_terms;
-  }
+  const { data: settings, error: settingsError } = await supabase
+    .from("company_settings")
+    .select("default_payment_terms,default_proposal_terms")
+    .limit(1)
+    .single();
+  if (settingsError) throw settingsError;
+  if (!paymentTerms) paymentTerms = settings.default_payment_terms;
+  const proposalTerms = resolveDefaultProposalTerms(settings.default_proposal_terms);
 
   let parsedPaymentTerms: ReturnType<typeof parsePaymentTerms>;
   try {
@@ -312,6 +312,7 @@ export async function createProposalAction(
       estimated_expenses: estimatedExpenses,
       estimated_materials: estimatedMaterials,
       payment_terms: parsedPaymentTerms,
+      proposal_terms: proposalTerms,
       validity_days: validityDays,
       billing_method: billingMethod,
       created_by: appUser.id,
@@ -452,14 +453,16 @@ export async function updateProposalRevisionAction(formData: FormData) {
   const paymentTerms = parsePaymentTerms(formData.get("payment_terms"));
   const validityDays = numberValue(formData.get("validity_days"), "Validity days", { min: 1 });
   const billingMethod = optionalText(formData.get("billing_method")) ?? "fixed_fee";
+  const proposalTerms = parseProposalTerms(formData.get("proposal_terms"));
   const scopeSections = parseProposalSections(formData);
   const { feeItems, expenseItems, materialItems } = parseProposalItems(formData);
 
-  const { data: proposalId, error } = await admin.rpc("update_proposal_revision_draft_v3", {
+  const { data: proposalId, error } = await admin.rpc("update_proposal_revision_draft_v4", {
     p_revision_id: revisionId,
     p_payment_terms: paymentTerms,
     p_validity_days: validityDays,
     p_billing_method: billingMethod,
+    p_proposal_terms: proposalTerms,
     p_sections: scopeSections,
     p_fee_items: feeItems,
     p_expense_items: expenseItems,
@@ -478,15 +481,22 @@ export async function createProposalRevisionAction(proposalId: string) {
   await Policies.proposalWrite();
   const admin = createAdminClient();
 
-  const { data: current, error } = await admin
-    .from("proposal_revisions")
-    .select("*")
-    .eq("proposal_id", proposalId)
-    .order("revision_number", { ascending: false })
-    .limit(1)
-    .single();
+  const [
+    { data: current, error },
+    { data: settings, error: settingsError },
+  ] = await Promise.all([
+    admin
+      .from("proposal_revisions")
+      .select("*")
+      .eq("proposal_id", proposalId)
+      .order("revision_number", { ascending: false })
+      .limit(1)
+      .single(),
+    admin.from("company_settings").select("default_proposal_terms").limit(1).single(),
+  ]);
 
   if (error) throw error;
+  if (settingsError) throw settingsError;
 
   const nextRevision = Number(current.revision_number) + 1;
 
@@ -500,6 +510,9 @@ export async function createProposalRevisionAction(proposalId: string) {
       estimated_materials: current.estimated_materials,
       billing_method: current.billing_method,
       payment_terms: current.payment_terms,
+      proposal_terms: resolveDefaultProposalTerms(
+        current.proposal_terms ?? settings.default_proposal_terms,
+      ),
       validity_days: current.validity_days,
       internal_notes: current.internal_notes,
       locked: false,

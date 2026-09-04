@@ -26,6 +26,15 @@ export function SettingsForm({ settings }: { settings: any }) {
       <label>Horizontal Logo Path<input name="logo_horizontal_path" defaultValue={settings.logo_horizontal_path ?? ""} /></label>
       <label>Square Logo Path<input name="logo_square_path" defaultValue={settings.logo_square_path ?? ""} /></label>
       <label className="full">Proposal Footer<textarea name="proposal_footer" rows={2} defaultValue={settings.proposal_footer ?? ""} /></label>
+      <label className="full">Default Proposal Terms and Conditions
+        <textarea
+          name="default_proposal_terms"
+          rows={30}
+          defaultValue={settings.default_proposal_terms}
+          required
+        />
+        <span>Copied into each new proposal version. Once that version is sent, its exact terms are preserved permanently.</span>
+      </label>
       <label className="full">Invoice Footer<textarea name="invoice_footer" rows={2} defaultValue={settings.invoice_footer ?? ""} /></label>
       <div className="full form-submit-row">
         <button className="primary-button" type="submit" disabled={pending}>

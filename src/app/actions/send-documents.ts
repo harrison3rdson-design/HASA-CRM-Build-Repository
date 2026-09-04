@@ -9,6 +9,7 @@ import { normalizeRelatedContact, selectDefaultProposalContact } from "@/lib/pro
 import { resolveAppUrl } from "@/lib/app-url";
 import { isTwilioConfigured } from "@/lib/messaging/twilio";
 import { isTransactionalEmailConfigured } from "@/lib/messaging/email";
+import { resolveDefaultProposalTerms } from "@/lib/proposal-terms";
 
 type SendDocumentResult =
   | { ok: true; url: string; results: Awaited<ReturnType<typeof deliverPublicLink>> }
@@ -50,7 +51,7 @@ export async function sendProposalAction(input: {
 
   const { data: revision, error: revisionError } = await admin
     .from("proposal_revisions")
-    .select("proposal_id,revision_number,locked")
+    .select("proposal_id,revision_number,locked,proposal_terms")
     .eq("id", input.revisionId)
     .single();
   if (revisionError) throw revisionError;
@@ -61,6 +62,27 @@ export async function sendProposalAction(input: {
   const isResend = revision.locked && ["sent", "viewed", "changes_requested"].includes(proposal.status);
   if (!isInitialSend && !isResend) {
     throw new Error("Only an unsent draft or a sent proposal awaiting authorization can be delivered.");
+  }
+
+  if (isInitialSend && !revision.proposal_terms) {
+    const { data: settings, error: settingsError } = await admin
+      .from("company_settings")
+      .select("default_proposal_terms")
+      .limit(1)
+      .single();
+    if (settingsError) throw settingsError;
+
+    const { data: stampedRevision, error: stampError } = await admin
+      .from("proposal_revisions")
+      .update({ proposal_terms: resolveDefaultProposalTerms(settings.default_proposal_terms) })
+      .eq("id", input.revisionId)
+      .eq("locked", false)
+      .select("id")
+      .maybeSingle();
+    if (stampError) throw stampError;
+    if (!stampedRevision) {
+      throw new Error("The proposal changed before its terms and conditions could be preserved.");
+    }
   }
 
   let contact = normalizeRelatedContact(proposal.primary_contact);

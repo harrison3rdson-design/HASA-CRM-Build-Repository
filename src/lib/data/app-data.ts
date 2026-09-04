@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase-admin";
 import { Policies } from "@/lib/auth/action-policy";
 import { parsePaymentTerms } from "@/lib/payment-terms";
 import type { ProjectWorkOption } from "@/lib/project-work-options";
+import { resolveDefaultProposalTerms } from "@/lib/proposal-terms";
 
 export async function getDashboardData(){
   await Policies.internalRead();
@@ -188,7 +189,10 @@ export async function getCompanySettings(){
   const s=createAdminClient();
   const {data,error}=await s.from("company_settings").select("*").limit(1).single();
   if(error) throw error;
-  return data;
+  return {
+    ...data,
+    default_proposal_terms: resolveDefaultProposalTerms(data.default_proposal_terms),
+  };
 }
 
 export async function getProposalFormData() {

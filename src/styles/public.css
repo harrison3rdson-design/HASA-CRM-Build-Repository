@@ -59,14 +59,14 @@ body{margin:0;background:var(--public-bg);color:var(--public-text);font-family:A
 .public-acceptance-preview .public-primary:disabled{cursor:not-allowed;background:#7d8791}
 .public-acceptance-preview .public-preview-note{padding-top:4px;color:#415466!important;font-size:11px;line-height:1.45}
 @media(max-width:600px){.public-shell{padding:10px}.public-header{align-items:flex-start}.public-brand-logo{width:190px}.public-document,.public-acceptance-card{padding:17px}.public-document h1{font-size:22px}.proposal-details-area,.proposal-summary-area{padding:15px}.proposal-commercial-terms{grid-template-columns:1fr}.public-preview-notice{align-items:flex-start;flex-direction:column}.public-preview-back{width:100%;text-align:center}.public-receipt-details{grid-template-columns:1fr}.public-receipt-details>div,.public-receipt-details>div:nth-child(odd){border-right:0;border-bottom:1px solid #d6eadf}.public-receipt-details>div:last-child{border-bottom:0}}
-.public-alternate-list>div{align-items:flex-start}.public-alternate-list small+small{color:#315d7d;font-weight:700}
+.public-alternate-list>div{align-items:flex-start}.public-alternate-list .public-alternate-description{margin-top:6px;font-size:14px;line-height:1.5}.public-alternate-list .public-alternate-rule{margin-top:6px;color:#315d7d;font-size:12px;line-height:1.4;font-weight:700}
 .public-acceptance-heading>div{display:grid;gap:4px}.public-live-total{color:#17364f;font-size:24px}
 .public-acceptance-card fieldset legend{margin-bottom:10px;color:var(--public-text);font-size:13px;font-weight:800}
 .public-alternate-fieldset{display:grid;gap:10px!important;margin-top:4px!important}
 .public-choice-card{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto;align-items:start;gap:12px!important;padding:13px;border:1px solid var(--public-border);border-radius:10px;background:#fff;color:var(--public-text)!important}
 .public-choice-card:has(input:checked){border-color:#5c94ba;background:#f0f7fb;box-shadow:0 0 0 1px #5c94ba}
 .public-choice-card input{width:18px;height:18px;margin:2px 0 0;padding:0}
-.public-choice-card>span{display:grid;gap:4px}.public-choice-card small{color:var(--public-muted);font-size:11px;line-height:1.4}
+.public-choice-card>span{display:grid;gap:4px}.public-choice-card small{color:var(--public-muted);font-size:11px;line-height:1.4}.public-choice-card .public-choice-description{font-size:14px;line-height:1.5}
 .public-choice-card .public-choice-rule{color:#315d7d;font-weight:700}.public-choice-required{border-color:#87b79d;background:#f2fbf6}
 .public-final-choices{display:grid;gap:12px;margin:4px 0;padding:15px;border:1px solid #bccbd7;border-radius:11px;background:#fbfcfd}
 .public-final-choices h3{margin:0;color:#17364f;font-size:16px}.public-choice-summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}

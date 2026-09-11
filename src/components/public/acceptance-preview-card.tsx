@@ -32,7 +32,7 @@ export function AcceptancePreviewCard({
             <input type="checkbox" />
             <span>
               <strong>{alternate.title}</strong>
-              {alternate.description ? <small>{alternate.description}</small> : null}
+              {alternate.description ? <small className="public-choice-description">{alternate.description}</small> : null}
             </span>
             <strong>+{money(alternate.amount)}</strong>
           </label>

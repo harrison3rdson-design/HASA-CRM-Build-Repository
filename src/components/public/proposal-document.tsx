@@ -191,8 +191,8 @@ export function ProposalDocument({
                   <div key={alternate.alternate_key}>
                     <span>
                       {alternate.title}
-                      {alternate.description ? <small>{alternate.description}</small> : null}
-                      <small>{alternateTypeLabel(alternate.alternate_type)}</small>
+                      {alternate.description ? <small className="public-alternate-description">{alternate.description}</small> : null}
+                      <small className="public-alternate-rule">{alternateTypeLabel(alternate.alternate_type)}</small>
                     </span>
                     <strong>+{money(alternate.amount)}</strong>
                   </div>

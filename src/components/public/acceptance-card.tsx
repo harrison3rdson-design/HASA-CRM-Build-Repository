@@ -220,7 +220,7 @@ export function AcceptanceCard({
               />
               <span>
                 <strong>{alternate.title}</strong>
-                {alternate.description ? <small>{alternate.description}</small> : null}
+                {alternate.description ? <small className="public-choice-description">{alternate.description}</small> : null}
                 <small className="public-choice-rule">{alternateRuleLabel(alternate, alternates)}</small>
               </span>
               <strong>+{money(alternate.amount)}</strong>

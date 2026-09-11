@@ -24,7 +24,7 @@ export async function getPublicProposalByToken(token: string) {
       proposal:proposals(
         id,proposal_number,project_name,project_location,status,
         client:clients(id,company_name),
-        primary_contact:contacts(first_name,last_name,title)
+        primary_contact:contacts(first_name,last_name,title,email)
       )
     `)
     .eq("id", link.proposal_revision_id)
@@ -32,11 +32,12 @@ export async function getPublicProposalByToken(token: string) {
 
   if (revisionError) throw revisionError;
 
-  const [{ data: sections }, { data: fees }, { data: expenses }, { data: materials }, { data: company }] = await Promise.all([
+  const [{ data: sections }, { data: fees }, { data: expenses }, { data: materials }, { data: alternates }, { data: company }] = await Promise.all([
     admin.from("proposal_sections").select("*").eq("proposal_revision_id", revision.id).order("sort_order"),
     admin.from("proposal_fee_items").select("*").eq("proposal_revision_id", revision.id).order("sort_order"),
     admin.from("proposal_expense_estimates").select("*").eq("proposal_revision_id", revision.id).order("sort_order"),
     admin.from("proposal_material_items").select("*").eq("proposal_revision_id", revision.id).order("sort_order"),
+    admin.from("proposal_alternates").select("*").eq("proposal_revision_id", revision.id).order("sort_order"),
     admin.from("company_settings").select("*").limit(1).single(),
   ]);
 
@@ -47,6 +48,7 @@ export async function getPublicProposalByToken(token: string) {
     fees: fees ?? [],
     expenses: expenses ?? [],
     materials: materials ?? [],
+    alternates: alternates ?? [],
     company,
   };
 }

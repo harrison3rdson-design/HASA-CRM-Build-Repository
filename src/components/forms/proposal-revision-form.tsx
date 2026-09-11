@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { updateProposalRevisionAction } from "@/app/actions/proposals";
 import {
+  ProposalAlternatesFields,
+  type AlternateLineValue,
+} from "@/components/forms/proposal-alternates-fields";
+import {
   ProposalLineItemsFields,
   type ExpenseLineValue,
   type LaborLineValue,
@@ -22,6 +26,7 @@ export function ProposalRevisionForm({
   laborLines,
   expenseLines,
   materialLines,
+  alternates,
 }: {
   proposalId: string;
   revision: {
@@ -36,6 +41,7 @@ export function ProposalRevisionForm({
   laborLines: LaborLineValue[];
   expenseLines: ExpenseLineValue[];
   materialLines: MaterialLineValue[];
+  alternates: AlternateLineValue[];
 }) {
   const revisionLabel = proposalRevisionLabel(revision.revision_number);
 
@@ -75,6 +81,8 @@ export function ProposalRevisionForm({
         initialExpenseLines={expenseLines}
         initialMaterialLines={materialLines}
       />
+
+      <ProposalAlternatesFields initialAlternates={alternates} />
 
       <label className="full">
         Proposal Terms and Conditions

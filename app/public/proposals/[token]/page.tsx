@@ -10,7 +10,7 @@ export default async function PublicProposalPage({
 }) {
   const { token } = await params;
   const data = await getPublicProposalByToken(token);
-  const { revision, proposal, sections, fees, expenses, materials, company } = data;
+  const { revision, proposal, sections, fees, expenses, materials, alternates, company } = data;
 
   return (
     <main className="public-shell">
@@ -21,12 +21,16 @@ export default async function PublicProposalPage({
         fees={fees}
         expenses={expenses}
         materials={materials}
+        alternates={alternates}
         company={company}
       />
 
       <AcceptanceCard
         actionUrl={`/api/public/proposals/${token}/accept`}
         buttonText="Accept Proposal"
+        alternates={alternates}
+        baseTotal={revision.estimated_total}
+        requireEmail
       />
     </main>
   );

@@ -66,6 +66,19 @@ type MaterialRecord = {
   unit_price: number | string;
   amount: number | string;
 };
+type AlternateRecord = {
+  id: string;
+  proposal_revision_id: string;
+  alternate_key: string;
+  title: string;
+  description: string | null;
+  alternate_type: "independent" | "dependent" | "bundle";
+  amount: number | string;
+  required_alternate_key: string | null;
+  bundle_component_keys: string[];
+  sort_order: number;
+};
+
 
 type AcceptanceRecord = {
   id: string;
@@ -75,6 +88,9 @@ type AcceptanceRecord = {
   signer_email: string | null;
   signer_mobile: string | null;
   accepted_at: string;
+  acceptance_version_id: string | null;
+  accepted_total: number | string | null;
+  selected_alternate_keys: string[];
   authorization_method: "electronic" | "verbal" | "email";
   recorded_at: string | null;
   recording_notes: string | null;
@@ -96,6 +112,17 @@ type AcceptanceRecord = {
     title: string;
     original_filename: string | null;
   }> | null;
+};
+
+type AcceptedDocumentRecord = {
+  id: string;
+  acceptance_id: string | null;
+  revision_number: number | null;
+  original_filename: string;
+  file_size: number | null;
+  sha256_hash: string;
+  generated_at: string;
+  locked: boolean;
 };
 
 function relatedOne<T>(value: T | T[] | null): T | null {
@@ -180,10 +207,24 @@ export default async function ProposalDetailPage({
       markupPercent: String(material.markup_percent ?? "0"),
     })) : [];
   const acceptances = d.acceptances as AcceptanceRecord[];
+  const alternateLines = latest ? (d.alternates as AlternateRecord[])
+    .filter((alternate) => alternate.proposal_revision_id === latest.id)
+    .map((alternate) => ({
+      id: alternate.id,
+      alternateKey: alternate.alternate_key,
+      title: alternate.title,
+      description: String(alternate.description ?? ""),
+      alternateType: alternate.alternate_type,
+      amount: String(alternate.amount),
+      requiredAlternateKey: String(alternate.required_alternate_key ?? ""),
+      bundleComponentKeys: alternate.bundle_component_keys ?? [],
+    })) : [];
   const acceptanceByRevision = new Map(
     acceptances.map((acceptance) => [acceptance.proposal_revision_id, acceptance]),
   );
   const latestAcceptance = latest ? acceptanceByRevision.get(latest.id) : null;
+  const acceptanceById = new Map(acceptances.map((acceptance) => [acceptance.id, acceptance]));
+  const acceptedDocuments = d.acceptedDocuments as AcceptedDocumentRecord[];
   const canRecoverAuthorization = Boolean(
     latest
     && latest.locked
@@ -285,6 +326,7 @@ export default async function ProposalDetailPage({
               laborLines={laborLines}
               expenseLines={expenseLines}
               materialLines={materialLines}
+              alternates={alternateLines}
             />
           </Panel>
         ) : null}
@@ -355,6 +397,25 @@ export default async function ProposalDetailPage({
           </Panel>
         ) : null}
 
+        <Panel title="Accepted Documents">
+          <p className="footnote">Final accepted PDFs are immutable. Each file is tied to the exact signed proposal snapshot, choices, total, and unique acceptance ID.</p>
+          {acceptedDocuments.length ? (
+            <div className="table-wrap"><table><thead><tr><th>Accepted PDF</th><th>Acceptance ID</th><th>Version</th><th>Accepted</th><th>Signed By</th><th>Selected Alternates</th><th>Accepted Total</th><th>SHA-256</th></tr></thead>
+            <tbody>{acceptedDocuments.map((document)=>{const acceptance=document.acceptance_id?acceptanceById.get(document.acceptance_id):null;const revisionAlternates=(d.alternates as AlternateRecord[]).filter((alternate)=>alternate.proposal_revision_id===acceptance?.proposal_revision_id);const selectedTitles=revisionAlternates.filter((alternate)=>acceptance?.selected_alternate_keys?.includes(alternate.alternate_key)).map((alternate)=>alternate.title);return <tr key={document.id}>
+              <td><Link className="table-link" href={`/api/generated-documents/${document.id}/download`} rel="noreferrer" target="_blank">{document.original_filename}</Link></td>
+              <td>{acceptance?.acceptance_version_id??"Legacy acceptance"}</td>
+              <td>{document.revision_number?proposalRevisionLabel(document.revision_number):"—"}</td>
+              <td>{dateTime(acceptance?.accepted_at??document.generated_at)}</td>
+              <td>{acceptance?.signer_name??"—"}</td>
+              <td>{selectedTitles.length?selectedTitles.join(", "):"Base scope only"}</td>
+              <td>{acceptance?.accepted_total!==null&&acceptance?.accepted_total!==undefined?money(acceptance.accepted_total):"—"}</td>
+              <td><code>{document.sha256_hash.slice(0,16)}…</code></td>
+            </tr>})}</tbody></table></div>
+          ) : (
+            <p className="footnote">No final accepted PDF has been generated for this proposal yet.</p>
+          )}
+        </Panel>
+
         {latest ? <>
           <Panel title="Scope">
             {d.sections.filter((s:any)=>s.proposal_revision_id===latest.id).map((s:any)=><div key={s.id} className="scope-block"><h3>{s.heading??s.section_type}</h3><p className="preline">{s.content}</p></div>)}
@@ -382,6 +443,13 @@ export default async function ProposalDetailPage({
                   ? resolveDefaultProposalTerms(d.companyDefaultProposalTerms)
                   : "No proposal-specific terms were included with this legacy version.")}
             </p>
+          </Panel>
+
+          <Panel title="Customer-Selectable Alternates">
+            {(d.alternates as AlternateRecord[]).filter((alternate)=>alternate.proposal_revision_id===latest.id).length ? (
+              <div className="table-wrap"><table><thead><tr><th>Alternate</th><th>Rule</th><th>Description</th><th>Add to Contract</th></tr></thead>
+              <tbody>{(d.alternates as AlternateRecord[]).filter((alternate)=>alternate.proposal_revision_id===latest.id).map((alternate)=><tr key={alternate.id}><td>{alternate.title}</td><td className="capitalize">{alternate.alternate_type}</td><td>{alternate.description??"—"}</td><td>{money(alternate.amount)}</td></tr>)}</tbody></table></div>
+            ) : <p className="footnote">This version has no customer-selectable alternates.</p>}
           </Panel>
         </> : null}
       </section>

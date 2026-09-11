@@ -16,6 +16,7 @@ export type PublicAcceptanceInput = {
   signerTitle: string | null;
   signerEmail: string | null;
   signerMobile: string | null;
+  selectedAlternateKeys: string[];
   signatureType: "typed";
   acceptanceStatement: string;
 };
@@ -31,6 +32,22 @@ function stringField(
   if (required && !value) throw new PublicRequestError(`${label} is required.`, 400);
   if (value.length > maxLength) throw new PublicRequestError(`${label} is too long.`, 400);
   return value || null;
+}
+
+function alternateKeysField(record: Record<string, unknown>): string[] {
+  const value = record.selectedAlternateKeys;
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > 50) {
+    throw new PublicRequestError("The alternate selections are invalid.", 400);
+  }
+  const keys = value.map((key) => typeof key === "string" ? key.trim() : "");
+  if (keys.some((key) => !/^[A-Za-z0-9_-]{1,80}$/.test(key))) {
+    throw new PublicRequestError("The alternate selections are invalid.", 400);
+  }
+  if (new Set(keys).size !== keys.length) {
+    throw new PublicRequestError("An alternate was selected more than once.", 400);
+  }
+  return keys;
 }
 
 async function readLimitedBody(request: Request): Promise<string> {
@@ -112,6 +129,7 @@ export async function readPublicAcceptance(request: Request): Promise<PublicAcce
   const signerTitle = stringField(record, "signerTitle", "Signer title", 120);
   const signerEmail = stringField(record, "signerEmail", "Signer email", 254);
   const signerMobile = stringField(record, "signerMobile", "Signer mobile number", 40);
+  const selectedAlternateKeys = alternateKeysField(record);
 
   if (signerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signerEmail)) {
     throw new PublicRequestError("Enter a valid signer email address.", 400);
@@ -122,6 +140,7 @@ export async function readPublicAcceptance(request: Request): Promise<PublicAcce
     signerTitle,
     signerEmail,
     signerMobile,
+    selectedAlternateKeys,
     signatureType: "typed",
     acceptanceStatement: "I accept and authorize this document.",
   };

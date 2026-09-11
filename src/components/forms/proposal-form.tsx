@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { createProposalAction } from "@/app/actions/proposals";
+import { ProposalAlternatesFields } from "@/components/forms/proposal-alternates-fields";
 import { ProposalLineItemsFields } from "@/components/forms/proposal-line-items-fields";
 import { ProposalScopeFields } from "@/components/forms/proposal-scope-fields";
 import { PAYMENT_TERMS, type PaymentTerms } from "@/lib/payment-terms";
@@ -124,6 +125,8 @@ export function ProposalForm({
       <ProposalScopeFields />
 
       <ProposalLineItemsFields />
+
+      <ProposalAlternatesFields />
 
       <div className="full form-submit-row">
         <button className="primary-button" type="submit" disabled={pending}>

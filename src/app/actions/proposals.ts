@@ -16,6 +16,11 @@ import {
   roundMoney,
   type ServiceBillingType,
 } from "@/lib/proposal-items";
+import {
+  parseProposalAlternateType,
+  validateAlternateConfiguration,
+  type ProposalAlternate,
+} from "@/lib/proposal-alternates";
 import { parseProposalSectionType } from "@/lib/proposal-sections";
 import { selectDefaultProposalContact } from "@/lib/proposal-contacts";
 import { roundHoursUp } from "@/lib/time-increments";
@@ -230,6 +235,40 @@ function parseProposalSections(formData: FormData) {
   return sections;
 }
 
+function parseProposalAlternates(formData: FormData): ProposalAlternate[] {
+  const alternates: ProposalAlternate[] = [];
+  const count = itemCount(formData.get("alternate_count"), "Alternate count");
+
+  for (let index = 0; index < count; index += 1) {
+    const title = optionalText(formData.get(`alternate_title_${index}`));
+    const description = optionalText(formData.get(`alternate_description_${index}`));
+    const amountText = optionalText(formData.get(`alternate_amount_${index}`));
+    const type = parseProposalAlternateType(formData.get(`alternate_type_${index}`));
+    const requiredAlternateKey = optionalText(formData.get(`alternate_requires_key_${index}`));
+    const bundleComponentKeys = String(formData.get(`alternate_bundle_keys_${index}`) ?? "")
+      .split(",")
+      .map((key) => key.trim())
+      .filter(Boolean);
+    if (!title && !description && !amountText && type === "independent") continue;
+
+    alternates.push({
+      alternate_key: requiredText(
+        formData.get(`alternate_key_${index}`),
+        `Alternate ${index + 1} internal key`,
+      ),
+      title: requiredText(title, `Alternate ${index + 1} title`),
+      description,
+      alternate_type: type,
+      amount: numberValue(amountText, `Alternate ${index + 1} price`, { min: 0 }),
+      required_alternate_key: type === "dependent" ? requiredAlternateKey : null,
+      bundle_component_keys: type === "bundle" ? bundleComponentKeys : [],
+      sort_order: index,
+    });
+  }
+
+  return validateAlternateConfiguration(alternates);
+}
+
 export async function createProposalAction(
   _previousState: CreateProposalActionState,
   formData: FormData,
@@ -242,6 +281,7 @@ export async function createProposalAction(
     requestedContactId: string | null;
     scopeSections: ReturnType<typeof parseProposalSections>;
     items: ReturnType<typeof parseProposalItems>;
+    alternates: ReturnType<typeof parseProposalAlternates>;
     paymentTerms: string | null;
     validityDays: number;
     billingMethod: string | null;
@@ -254,6 +294,7 @@ export async function createProposalAction(
       requestedContactId: optionalText(formData.get("primary_contact_id")),
       scopeSections: parseProposalSections(formData),
       items: parseProposalItems(formData),
+      alternates: parseProposalAlternates(formData),
       paymentTerms: optionalText(formData.get("payment_terms")),
       validityDays: numberValue(formData.get("validity_days"), "Validity days", { min: 1 }),
       billingMethod: optionalText(formData.get("billing_method")),
@@ -268,6 +309,7 @@ export async function createProposalAction(
     requestedContactId,
     scopeSections,
     items: { feeItems, expenseItems, materialItems, professionalFee, estimatedExpenses, estimatedMaterials },
+    alternates,
     validityDays,
     billingMethod,
   } = proposalInput;
@@ -391,6 +433,19 @@ export async function createProposalAction(
     }
   }
 
+  if (alternates.length) {
+    const { error: alternatesError } = await supabase
+      .from("proposal_alternates")
+      .insert(alternates.map((alternate) => ({
+        ...alternate,
+        proposal_revision_id: revision.id,
+      })));
+    if (alternatesError) {
+      await discardIncompleteProposal();
+      throw alternatesError;
+    }
+  }
+
   revalidatePath("/proposals");
   redirect(`/proposals/${proposal.id}`);
 }
@@ -480,7 +535,8 @@ export async function updateProposalRevisionAction(formData: FormData) {
   const scopeSections = parseProposalSections(formData);
   const { feeItems, expenseItems, materialItems } = parseProposalItems(formData);
 
-  const { data: proposalId, error } = await admin.rpc("update_proposal_revision_draft_v5", {
+  const alternates = parseProposalAlternates(formData);
+  const { data: proposalId, error } = await admin.rpc("update_proposal_revision_draft_v6", {
     p_revision_id: revisionId,
     p_payment_terms: paymentTerms,
     p_validity_days: validityDays,
@@ -490,6 +546,7 @@ export async function updateProposalRevisionAction(formData: FormData) {
     p_fee_items: feeItems,
     p_expense_items: expenseItems,
     p_material_items: materialItems,
+    p_alternates: alternates,
   });
 
   if (error) throw error;
@@ -562,6 +619,7 @@ export async function createProposalRevisionAction(proposalId: string) {
   await copyChildren("proposal_fee_items", "proposal_revision_id");
   await copyChildren("proposal_expense_estimates", "proposal_revision_id");
   await copyChildren("proposal_material_items", "proposal_revision_id");
+  await copyChildren("proposal_alternates", "proposal_revision_id");
 
   await admin
     .from("proposals")

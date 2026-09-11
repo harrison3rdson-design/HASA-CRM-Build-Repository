@@ -73,13 +73,16 @@ export async function getProposalDetail(proposalId: string) {
     { data: fees },
     { data: expenses },
     { data: materials },
+    { data: alternates },
     { data: acceptances },
     { data: deliveries, error: deliveriesError },
+    { data: acceptedDocuments, error: acceptedDocumentsError },
   ] = await Promise.all([
     revisionIds.length ? s.from("proposal_sections").select("*").in("proposal_revision_id", revisionIds).order("sort_order") : Promise.resolve({ data: [] } as any),
     revisionIds.length ? s.from("proposal_fee_items").select("*").in("proposal_revision_id", revisionIds).order("sort_order") : Promise.resolve({ data: [] } as any),
     revisionIds.length ? s.from("proposal_expense_estimates").select("*").in("proposal_revision_id", revisionIds).order("sort_order") : Promise.resolve({ data: [] } as any),
     revisionIds.length ? s.from("proposal_material_items").select("*").in("proposal_revision_id", revisionIds).order("sort_order") : Promise.resolve({ data: [] } as any),
+    revisionIds.length ? s.from("proposal_alternates").select("*").in("proposal_revision_id", revisionIds).order("sort_order") : Promise.resolve({ data: [] } as any),
     revisionIds.length ? s.from("proposal_acceptances").select(`
       *,
       recorded_by_user:app_users(first_name,last_name,email),
@@ -90,9 +93,15 @@ export async function getProposalDetail(proposalId: string) {
       .eq("document_type", "proposal")
       .eq("related_record_id", proposalId)
       .order("created_at", { ascending: false }),
+    s.from("generated_documents")
+      .select("id,acceptance_id,revision_number,original_filename,file_size,sha256_hash,storage_path,generated_at,locked")
+      .eq("document_type", "executed_proposal")
+      .eq("related_record_id", proposalId)
+      .order("generated_at", { ascending: false }),
   ]);
   if (deliveriesError) throw deliveriesError;
 
+  if (acceptedDocumentsError) throw acceptedDocumentsError;
   return {
     proposal,
     latestAnnualProposalNumber: latestAnnualProposal?.proposal_number ?? null,
@@ -104,7 +113,9 @@ export async function getProposalDetail(proposalId: string) {
     expenses: expenses ?? [],
     materials: materials ?? [],
     acceptances: acceptances ?? [],
+    alternates: alternates ?? [],
     deliveries: deliveries ?? [],
+    acceptedDocuments: acceptedDocuments ?? [],
   };
 }
 

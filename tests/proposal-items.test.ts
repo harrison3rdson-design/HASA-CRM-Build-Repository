@@ -98,7 +98,7 @@ describe("proposal material persistence", () => {
   it("stores materials independently and includes them in the proposal total", () => {
     expect(migration).toContain("create table public.proposal_material_items");
     expect(migration).toContain("professional_fee + estimated_materials + estimated_expenses");
-    expect(action).toContain('admin.rpc("update_proposal_revision_draft_v5"');
+    expect(action).toContain('admin.rpc("update_proposal_revision_draft_v6"');
     expect(action).toContain('copyChildren("proposal_material_items"');
   });
 

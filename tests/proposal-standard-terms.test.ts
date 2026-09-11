@@ -40,7 +40,7 @@ describe("standard proposal terms", () => {
 
     expect(actions).toContain("proposal_terms: proposalTerms");
     expect(actions).toContain("current.proposal_terms ?? settings.default_proposal_terms");
-    expect(actions).toContain('rpc("update_proposal_revision_draft_v5"');
+    expect(actions).toContain('rpc("update_proposal_revision_draft_v6"');
     expect(settingsAction).toContain("default_proposal_terms: parseProposalTerms");
     expect(settingsForm).toContain("Default Proposal Terms and Conditions");
     expect(revisionForm).toContain('name="proposal_terms"');
@@ -56,7 +56,7 @@ describe("standard proposal terms", () => {
     expect(customerDocument).toContain("revision.proposal_terms");
     expect(publicCss).toContain("page-break-before:always");
     expect(executedPdf).toContain("proposalTermsSection");
-    expect(executedPdf.indexOf("${new Date().toISOString()}</div>"))
+    expect(executedPdf.indexOf("${escapeHtml(metadata.acceptedAt)}"))
       .toBeLessThan(executedPdf.indexOf("${proposalTermsSection}"));
   });
 });

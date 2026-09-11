@@ -41,6 +41,9 @@ export default async function ProposalPreviewPage({
   const materials = detail.materials.filter(
     (material: RevisionItem) => material.proposal_revision_id === revision.id,
   );
+  const alternates = detail.alternates.filter(
+    (alternate: RevisionItem) => alternate.proposal_revision_id === revision.id,
+  );
 
   return (
     <main className="public-shell public-preview-shell">
@@ -61,10 +64,14 @@ export default async function ProposalPreviewPage({
         fees={fees}
         expenses={expenses}
         materials={materials}
+        alternates={alternates}
         company={company}
       />
 
-      <AcceptancePreviewCard />
+      <AcceptancePreviewCard
+        alternates={alternates}
+        baseTotal={revision.estimated_total}
+      />
     </main>
   );
 }

@@ -4,6 +4,11 @@ export type EmailSendInput = {
   text: string;
   html?: string;
   idempotencyKey?: string;
+  attachments?: Array<{
+    filename: string;
+    content: string;
+    contentType?: string;
+  }>;
 };
 
 export type EmailDeliveryResult = {
@@ -48,6 +53,11 @@ export class TransactionalEmailProvider {
         subject: input.subject,
         text: input.text,
         html: input.html,
+        attachments: input.attachments?.map((attachment) => ({
+          filename: attachment.filename,
+          content: attachment.content,
+          content_type: attachment.contentType,
+        })),
       }),
     });
 

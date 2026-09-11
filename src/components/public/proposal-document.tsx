@@ -3,6 +3,7 @@ import Image from "next/image";
 import { money } from "@/lib/ui/format";
 import { proposalRevisionLabel } from "@/lib/proposal-revisions";
 import { resolveDefaultProposalTerms } from "@/lib/proposal-terms";
+import type { ProposalAlternate } from "@/lib/proposal-alternates";
 
 type ProposalDocumentProps = {
   revision: {
@@ -55,6 +56,7 @@ type ProposalDocumentProps = {
     unit_price: number | string | null;
     amount: number | string | null;
   }>;
+  alternates: ProposalAlternate[];
   company: {
     display_name: string;
     legal_name: string;
@@ -75,6 +77,12 @@ function servicePriceDetail(fee: ProposalDocumentProps["fees"][number]) {
   return `${basis} · ${Number(fee.quantity ?? 0)} ${fee.unit} × ${money(fee.rate)}`;
 }
 
+function alternateTypeLabel(type: ProposalAlternate["alternate_type"]) {
+  if (type === "dependent") return "Dependent option";
+  if (type === "bundle") return "Bundle option";
+  return "Independent option";
+}
+
 export function ProposalDocument({
   revision,
   proposal,
@@ -83,6 +91,7 @@ export function ProposalDocument({
   expenses,
   materials,
   company,
+  alternates,
 }: ProposalDocumentProps) {
   const proposalTerms = revision.proposal_terms
     ?? (revision.locked ? "" : resolveDefaultProposalTerms(company.default_proposal_terms));
@@ -173,6 +182,24 @@ export function ProposalDocument({
               ))}
             </div>
           </section>
+          {alternates.length ? (
+            <section>
+              <h2>Optional Alternates</h2>
+              <p className="public-muted">These options may be selected or declined in the acceptance section below.</p>
+              <div className="public-table public-alternate-list">
+                {alternates.map((alternate) => (
+                  <div key={alternate.alternate_key}>
+                    <span>
+                      {alternate.title}
+                      {alternate.description ? <small>{alternate.description}</small> : null}
+                      <small>{alternateTypeLabel(alternate.alternate_type)}</small>
+                    </span>
+                    <strong>+{money(alternate.amount)}</strong>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
         </section>
 
         <section className="proposal-summary-area" aria-labelledby="proposal-summary-heading">

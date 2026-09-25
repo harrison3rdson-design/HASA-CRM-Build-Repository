@@ -67,14 +67,14 @@ describe("explicit Data API grants and scheduled maintenance", () => {
       { path: "/api/internal/past-due", schedule: "0 12 * * *" },
     ]);
 
-    const route = read("src/app/api/internal/past-due/route.ts");
+    const route = read("app/api/internal/past-due/route.ts");
     expect(route).toContain('request.headers.get("authorization") === `Bearer ${secret}`');
     expect(route).toContain("process.env.CRON_SECRET");
     expect(route).toContain("export async function GET");
     expect(route).toContain("markPastDueInvoices()");
     expect(route).toContain('"Cache-Control": "private, no-store, max-age=0"');
-  });
 
-    const health = read("src/app/api/internal/health/production/route.ts");
+    const health = read("app/api/internal/health/production/route.ts");
     expect(health).toContain("cronSecret: !!process.env.CRON_SECRET");
+  });
 });

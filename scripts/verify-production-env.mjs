@@ -1,3 +1,5 @@
+// Fail production builds before deployment when scheduled maintenance cannot authenticate.
+
 const isVercelProduction = process.env.VERCEL === "1"
   && process.env.VERCEL_ENV === "production";
 

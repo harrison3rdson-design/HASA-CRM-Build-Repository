@@ -11,6 +11,7 @@ export async function GET() {
     const admin = createAdminClient();
 
     const checks: Record<string, boolean> = {
+      cronSecret: !!process.env.CRON_SECRET,
       supabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       supabaseServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,

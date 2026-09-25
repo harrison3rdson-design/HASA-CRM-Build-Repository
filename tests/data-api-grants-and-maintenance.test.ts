@@ -76,5 +76,13 @@ describe("explicit Data API grants and scheduled maintenance", () => {
 
     const health = read("app/api/internal/health/production/route.ts");
     expect(health).toContain("cronSecret: !!process.env.CRON_SECRET");
+
+    const packageJson = JSON.parse(read("package.json"));
+    expect(packageJson.scripts.prebuild).toContain("scripts/verify-production-env.mjs");
+
+    const preflight = read("scripts/verify-production-env.mjs");
+    expect(preflight).toContain('process.env.VERCEL_ENV === "production"');
+    expect(preflight).toContain('const required = ["CRON_SECRET"]');
+    expect(preflight).toContain("!process.env[name]?.trim()");
   });
 });

@@ -5,7 +5,7 @@
   "packageManager": "pnpm@11.19.0",
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/prepare-chromium.mjs",
+    "prebuild": "node scripts/verify-production-env.mjs && node scripts/prepare-chromium.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

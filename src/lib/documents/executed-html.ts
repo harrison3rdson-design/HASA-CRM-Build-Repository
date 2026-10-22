@@ -2,6 +2,7 @@ import { money } from "@/lib/ui/format";
 import { proposalRevisionLabel } from "@/lib/proposal-revisions";
 import { hasaHorizontalLogoDataUri } from "@/lib/branding/assets";
 import type { AlternateSelection } from "@/lib/proposal-alternates";
+import { proposalContentToSafeHtml } from "@/lib/proposal-content";
 
 type AcceptedProposalMetadata = {
   acceptanceVersionId: string;
@@ -28,7 +29,7 @@ export function executedProposalHtml(
       + "</p></section>"
     : "";
   const sections = (data.sections ?? []).map((section: any) =>
-    `<section><h2>${escapeHtml(section.heading ?? section.section_type)}</h2><p>${escapeHtml(section.content ?? "").replace(/\n/g, "<br>")}</p></section>`
+    `<section><h2>${escapeHtml(section.heading ?? section.section_type)}</h2><div class="proposal-rich-content">${proposalContentToSafeHtml(section.content_json ?? section.contentJson, section.content ?? "")}</div></section>`
   ).join("");
 
   const fees = (data.fees ?? []).map((fee: any) =>
@@ -64,6 +65,7 @@ export function executedProposalHtml(
     .proposal-section-heading{margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #c5d2dc}
     .proposal-section-label{color:#315d7d;font-size:8pt;font-weight:bold;letter-spacing:1.2px;text-transform:uppercase}
     .proposal-section-heading h2{margin:3px 0}.proposal-section-heading p{margin:0;color:#5d6b78;font-size:9pt}
+    .proposal-rich-content{font-size:9.5pt;line-height:1.5;color:#2d3a46}.proposal-rich-content>*:first-child{margin-top:0}.proposal-rich-content>*:last-child{margin-bottom:0}.proposal-rich-content p{margin:0 0 8px}.proposal-rich-content h2,.proposal-rich-content h3,.proposal-rich-content h4{margin:13px 0 5px;color:#17364f;line-height:1.28;page-break-after:avoid}.proposal-rich-content h2{font-size:12pt}.proposal-rich-content h3{font-size:11pt}.proposal-rich-content h4{font-size:10pt}.proposal-rich-content ul,.proposal-rich-content ol{margin:6px 0 10px;padding-left:22px}.proposal-rich-content li{margin:3px 0;page-break-inside:avoid}.proposal-rich-content li p{margin:0}.proposal-rich-content blockquote{margin:10px 0;padding:5px 0 5px 10px;border-left:3px solid #86a8c0;color:#536575}.proposal-rich-content code{padding:1px 3px;background:#e9eff4;font-family:Consolas,monospace;font-size:8.5pt}.proposal-rich-content hr{margin:12px 0;border:0;border-top:1px solid #c5d2dc}
     .proposal-summary-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #c5d2dc}
     .proposal-summary-row.total{margin-top:3px;padding-top:9px;border-top:2px solid #315d7d;border-bottom:0;color:#17364f;font-size:13pt}
     .proposal-commercial-terms{display:flex;gap:30px;margin-top:12px;padding-top:10px;border-top:1px solid #c5d2dc;font-size:9pt}

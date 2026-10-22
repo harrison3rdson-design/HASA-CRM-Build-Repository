@@ -1,5 +1,6 @@
 import type { InvoiceDocumentModel, ProposalDocumentModel } from "@/types/documents";
 import { proposalRevisionLabel } from "@/lib/proposal-revisions";
+import { proposalContentToSafeHtml } from "@/lib/proposal-content";
 
 function esc(value: unknown): string {
   return String(value ?? "")
@@ -50,6 +51,14 @@ function shell(title: string, body: string, branding: ProposalDocumentModel["bra
   .company-meta { text-align:right; font-size:8.5pt; color:#4b5563; }
   h1 { font-size:18pt; margin:20px 0 6px; }
   h2 { font-size:12pt; margin:18px 0 6px; }
+  .proposal-rich-content { font-size:10pt; line-height:1.5; }
+  .proposal-rich-content > *:first-child { margin-top:0; }
+  .proposal-rich-content > *:last-child { margin-bottom:0; }
+  .proposal-rich-content p { margin:0 0 8px; }
+  .proposal-rich-content h2,.proposal-rich-content h3,.proposal-rich-content h4 { color:#17364f; page-break-after:avoid; }
+  .proposal-rich-content ul,.proposal-rich-content ol { margin:6px 0 10px; padding-left:22px; }
+  .proposal-rich-content li { margin:3px 0; page-break-inside:avoid; }
+  .proposal-rich-content li p { margin:0; }
   .muted { color:#6b7280; }
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
   table { width:100%; border-collapse:collapse; margin-top:10px; }
@@ -91,7 +100,7 @@ export function renderProposalHtml(model: ProposalDocumentModel): string {
 
     ${model.sections.map(s => `
       <h2>${esc(s.heading)}</h2>
-      <div>${esc(s.content).replaceAll("\n","<br>")}</div>
+      <div class="proposal-rich-content">${proposalContentToSafeHtml(s.contentJson, s.content)}</div>
     `).join("")}
 
     <h2>Professional Fees</h2>

@@ -8,6 +8,7 @@ import { SendProposalButton } from "@/components/proposals/send-proposal-button"
 import { RevisionPaymentTermsForm } from "@/components/forms/revision-payment-terms-form";
 import { ProposalRevisionForm } from "@/components/forms/proposal-revision-form";
 import { ProposalPrimaryContactForm } from "@/components/forms/proposal-primary-contact-form";
+import { ProposalRichContent } from "@/components/public/proposal-rich-content";
 import { ManualProposalAuthorizationForm } from "@/components/proposals/manual-proposal-authorization-form";
 import { getProposalDetail } from "@/lib/data/detail-data";
 import { parsePaymentTerms } from "@/lib/payment-terms";
@@ -20,6 +21,7 @@ import type { ExpenseBillingRule, ServiceBillingType } from "@/lib/proposal-item
 import { parseProposalSectionType } from "@/lib/proposal-sections";
 import { proposalRevisionLabel } from "@/lib/proposal-revisions";
 import { resolveDefaultProposalTerms } from "@/lib/proposal-terms";
+import { normalizeProposalContent } from "@/lib/proposal-content";
 import { dateTime, money } from "@/lib/ui/format";
 import { isTwilioConfigured } from "@/lib/messaging/twilio";
 import { isTransactionalEmailConfigured } from "@/lib/messaging/email";
@@ -30,6 +32,7 @@ type SectionRecord = {
   section_type: string;
   heading: string | null;
   content: string;
+  content_json?: unknown;
 };
 
 type FeeRecord = {
@@ -172,6 +175,7 @@ export default async function ProposalDetailPage({
       sectionType: parseProposalSectionType(section.section_type),
       heading: String(section.heading ?? ""),
       content: section.content,
+      contentJson: normalizeProposalContent(section.content_json, section.content),
     })) : [];
   const laborLines = latest ? (d.fees as FeeRecord[])
     .filter((fee) => fee.proposal_revision_id === latest.id)
@@ -418,7 +422,7 @@ export default async function ProposalDetailPage({
 
         {latest ? <>
           <Panel title="Scope">
-            {d.sections.filter((s:any)=>s.proposal_revision_id===latest.id).map((s:any)=><div key={s.id} className="scope-block"><h3>{s.heading??s.section_type}</h3><p className="preline">{s.content}</p></div>)}
+              {d.sections.filter((s:any)=>s.proposal_revision_id===latest.id).map((s:any)=><div key={s.id} className="scope-block"><h3>{s.heading??s.section_type}</h3><ProposalRichContent contentJson={s.content_json} fallbackText={s.content}/></div>)}
           </Panel>
 
           <Panel title="Professional Fees">

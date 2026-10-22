@@ -17,6 +17,8 @@
     "@sparticuz/chromium-min": "149.0.0",
     "@supabase/ssr": "^0.6.0",
     "@supabase/supabase-js": "^2.0.0",
+    "@tiptap/react": "3.32.0",
+    "@tiptap/starter-kit": "3.32.0",
     "next": "^15.0.0",
     "puppeteer-core": "25.1.0",
     "react": "^19.0.0",

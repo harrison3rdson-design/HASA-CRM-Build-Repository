@@ -19,7 +19,7 @@ export interface ProposalDocumentModel {
   clientContact?: string;
   projectName: string;
   projectLocation?: string;
-  sections: Array<{ heading: string; content: string }>;
+  sections: Array<{ heading: string; content: string; contentJson?: unknown }>;
   feeItems: Array<{ description: string; amount: number }>;
   expenseEstimates: Array<{
     category: string;

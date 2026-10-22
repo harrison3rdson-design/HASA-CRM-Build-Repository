@@ -4,6 +4,7 @@ import { money } from "@/lib/ui/format";
 import { proposalRevisionLabel } from "@/lib/proposal-revisions";
 import { resolveDefaultProposalTerms } from "@/lib/proposal-terms";
 import type { ProposalAlternate } from "@/lib/proposal-alternates";
+import { ProposalRichContent } from "@/components/public/proposal-rich-content";
 
 type ProposalDocumentProps = {
   revision: {
@@ -28,6 +29,7 @@ type ProposalDocumentProps = {
     heading?: string | null;
     section_type: string;
     content: string;
+    content_json?: unknown;
   }>;
   fees: Array<{
     id: string;
@@ -131,7 +133,10 @@ export function ProposalDocument({
           {sections.map((section) => (
             <section key={section.id}>
               <h2>{section.heading ?? section.section_type}</h2>
-              <p className="preline">{section.content}</p>
+              <ProposalRichContent
+                contentJson={section.content_json}
+                fallbackText={section.content}
+              />
             </section>
           ))}
 

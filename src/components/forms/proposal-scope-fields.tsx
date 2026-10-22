@@ -1,17 +1,32 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   PROPOSAL_SECTION_TYPE_LABELS,
   PROPOSAL_SECTION_TYPES,
   type ProposalSectionType,
 } from "@/lib/proposal-sections";
+import {
+  legacyTextToProposalDocument,
+  type ProposalContentDocument,
+} from "@/lib/proposal-content";
+
+const ProposalContentEditor = dynamic(
+  () => import("@/components/forms/proposal-content-editor")
+    .then((module) => module.ProposalContentEditor),
+  {
+    ssr: false,
+    loading: () => <div className="proposal-content-editor is-loading" aria-label="Loading content editor" />,
+  },
+);
 
 export type ScopeSectionValue = {
   id: string;
   sectionType: ProposalSectionType;
   heading: string;
   content: string;
+  contentJson?: ProposalContentDocument | null;
 };
 
 const EMPTY_SCOPE_SECTIONS: ScopeSectionValue[] = [];
@@ -22,6 +37,7 @@ function blankScopeSection(id: string): ScopeSectionValue {
     sectionType: "custom",
     heading: "",
     content: "",
+    contentJson: legacyTextToProposalDocument(""),
   };
 }
 
@@ -87,16 +103,23 @@ export function ProposalScopeFields({
                 placeholder="Project Scope"
               />
             </label>
-            <label className="scope-content">
-              Content
-              <textarea
-                name={`scope_content_${index}`}
-                value={section.content}
-                onChange={(event) => updateSection(section.id, { content: event.target.value })}
-                placeholder="Describe the work included in this proposal."
-                rows={5}
+            <div className="scope-content">
+              <span className="scope-content-label">Content</span>
+              <input type="hidden" name={`scope_content_${index}`} value={section.content} />
+              <input
+                type="hidden"
+                name={`scope_content_json_${index}`}
+                value={JSON.stringify(section.contentJson ?? legacyTextToProposalDocument(section.content))}
               />
-            </label>
+              <ProposalContentEditor
+                initialContent={section.contentJson}
+                fallbackText={section.content}
+                onChange={(contentJson, content) => updateSection(section.id, { contentJson, content })}
+              />
+              <span className="scope-content-help">
+                Use headings, emphasis, and lists here. The customer preview and accepted PDF will use this same formatting.
+              </span>
+            </div>
             <button
               className="text-button remove-line"
               type="button"

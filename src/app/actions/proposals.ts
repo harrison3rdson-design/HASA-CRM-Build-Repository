@@ -22,6 +22,7 @@ import {
   type ProposalAlternate,
 } from "@/lib/proposal-alternates";
 import { parseProposalSectionType } from "@/lib/proposal-sections";
+import { parseProposalContentJson, proposalContentToPlainText } from "@/lib/proposal-content";
 import { selectDefaultProposalContact } from "@/lib/proposal-contacts";
 import { roundHoursUp } from "@/lib/time-increments";
 import { Policies } from "@/lib/auth/action-policy";
@@ -215,19 +216,26 @@ function parseProposalSections(formData: FormData) {
     section_type: ReturnType<typeof parseProposalSectionType>;
     heading: string | null;
     content: string;
+    content_json: ReturnType<typeof parseProposalContentJson>;
     sort_order: number;
   }>;
   const scopeCount = itemCount(formData.get("scope_count"), "Scope section count");
 
   for (let index = 0; index < scopeCount; index += 1) {
     const heading = optionalText(formData.get(`scope_heading_${index}`));
-    const content = optionalText(formData.get(`scope_content_${index}`));
+    const fallbackContent = optionalText(formData.get(`scope_content_${index}`)) ?? "";
+    const contentJson = parseProposalContentJson(
+      formData.get(`scope_content_json_${index}`),
+      fallbackContent,
+    );
+    const content = proposalContentToPlainText(contentJson);
     if (!heading && !content) continue;
 
     sections.push({
       section_type: parseProposalSectionType(formData.get(`scope_type_${index}`)),
       heading,
       content: requiredText(content, `Scope section ${index + 1} content`),
+      content_json: contentJson,
       sort_order: index,
     });
   }
@@ -536,7 +544,7 @@ export async function updateProposalRevisionAction(formData: FormData) {
   const { feeItems, expenseItems, materialItems } = parseProposalItems(formData);
 
   const alternates = parseProposalAlternates(formData);
-  const { data: proposalId, error } = await admin.rpc("update_proposal_revision_draft_v6", {
+  const { data: proposalId, error } = await admin.rpc("update_proposal_revision_draft_v7", {
     p_revision_id: revisionId,
     p_payment_terms: paymentTerms,
     p_validity_days: validityDays,

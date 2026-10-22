@@ -11,6 +11,7 @@ export type ProposalContentNode = {
 };
 
 export type ProposalContentDocument = ProposalContentNode & { type: "doc" };
+export type ProposalContentFallbackMode = "standard" | "numbered-sections";
 
 const ALLOWED_BLOCK_NODES = new Set([
   "paragraph",
@@ -79,7 +80,10 @@ function textNodesForLines(lines: string[]): ProposalContentNode[] {
   return content;
 }
 
-export function legacyTextToProposalDocument(text: string): ProposalContentDocument {
+export function legacyTextToProposalDocument(
+  text: string,
+  fallbackMode: ProposalContentFallbackMode = "standard",
+): ProposalContentDocument {
   const normalized = String(text ?? "").replace(/\r\n?/g, "\n");
   const blocks: ProposalContentNode[] = [];
   let paragraphLines: string[] = [];
@@ -98,7 +102,22 @@ export function legacyTextToProposalDocument(text: string): ProposalContentDocum
 
   normalized.split("\n").forEach((line) => {
     const bullet = line.match(/^\s*[-*•]\s+(.+)$/);
-    const numbered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+    const numberedHeading = fallbackMode === "numbered-sections"
+      ? line.match(/^\s*(\d+\.\s+.+)$/)
+      : null;
+    const numbered = fallbackMode === "numbered-sections"
+      ? line.match(/^\s*\d+\)\s+(.+)$/)
+      : line.match(/^\s*\d+[.)]\s+(.+)$/);
+    if (numberedHeading) {
+      flushList();
+      flushParagraph();
+      blocks.push({
+        type: "heading",
+        attrs: { level: 3 },
+        content: [{ type: "text", text: numberedHeading[1] }],
+      });
+      return;
+    }
     if (bullet || numbered) {
       flushParagraph();
       const type = bullet ? "bulletList" : "orderedList";
@@ -129,6 +148,7 @@ export function legacyTextToProposalDocument(text: string): ProposalContentDocum
 export function normalizeProposalContent(
   value: unknown,
   fallbackText = "",
+  fallbackMode: ProposalContentFallbackMode = "standard",
 ): ProposalContentDocument {
   if (isRecord(value) && value.type === "doc" && Array.isArray(value.content)) {
     const content = value.content
@@ -136,18 +156,19 @@ export function normalizeProposalContent(
       .filter(Boolean) as ProposalContentNode[];
     if (content.length) return { type: "doc", content };
   }
-  return legacyTextToProposalDocument(fallbackText);
+  return legacyTextToProposalDocument(fallbackText, fallbackMode);
 }
 
 export function parseProposalContentJson(
   value: FormDataEntryValue | null,
   fallbackText = "",
+  fallbackMode: ProposalContentFallbackMode = "standard",
 ): ProposalContentDocument {
-  if (typeof value !== "string" || !value.trim()) return legacyTextToProposalDocument(fallbackText);
+  if (typeof value !== "string" || !value.trim()) return legacyTextToProposalDocument(fallbackText, fallbackMode);
   try {
-    return normalizeProposalContent(JSON.parse(value), fallbackText);
+    return normalizeProposalContent(JSON.parse(value), fallbackText, fallbackMode);
   } catch {
-    return legacyTextToProposalDocument(fallbackText);
+    return legacyTextToProposalDocument(fallbackText, fallbackMode);
   }
 }
 
@@ -213,7 +234,8 @@ function nodeHtml(node: ProposalContentNode): string {
 export function proposalContentToSafeHtml(
   value: unknown,
   fallbackText = "",
+  fallbackMode: ProposalContentFallbackMode = "standard",
 ): string {
-  const document = normalizeProposalContent(value, fallbackText);
+  const document = normalizeProposalContent(value, fallbackText, fallbackMode);
   return (document.content ?? []).map(nodeHtml).join("");
 }

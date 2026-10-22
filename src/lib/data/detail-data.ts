@@ -56,7 +56,7 @@ export async function getProposalDetail(proposalId: string) {
       .limit(1)
       .maybeSingle(),
     s.from("company_settings")
-      .select("default_proposal_terms")
+      .select("default_proposal_terms,default_proposal_terms_json")
       .limit(1)
       .single(),
   ]);
@@ -106,6 +106,7 @@ export async function getProposalDetail(proposalId: string) {
     proposal,
     latestAnnualProposalNumber: latestAnnualProposal?.proposal_number ?? null,
     companyDefaultProposalTerms: companySettings.default_proposal_terms,
+    companyDefaultProposalTermsJson: companySettings.default_proposal_terms_json,
     contacts: contacts ?? [],
     revisions: revisions ?? [],
     sections: sections ?? [],

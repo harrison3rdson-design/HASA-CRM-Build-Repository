@@ -6,11 +6,14 @@ import {
   normalizeProposalContent,
   proposalContentToPlainText,
   type ProposalContentDocument,
+  type ProposalContentFallbackMode,
 } from "@/lib/proposal-content";
 
 type ProposalContentEditorProps = {
   initialContent?: unknown;
   fallbackText: string;
+  fallbackMode?: ProposalContentFallbackMode;
+  ariaLabel?: string;
   onChange: (content: ProposalContentDocument, plainText: string) => void;
 };
 
@@ -45,6 +48,8 @@ function ToolbarButton({
 export function ProposalContentEditor({
   initialContent,
   fallbackText,
+  fallbackMode = "standard",
+  ariaLabel = "Proposal section content",
   onChange,
 }: ProposalContentEditorProps) {
   const editor = useEditor({
@@ -53,16 +58,16 @@ export function ProposalContentEditor({
         heading: { levels: [2, 3, 4] },
       }),
     ],
-    content: normalizeProposalContent(initialContent, fallbackText),
+    content: normalizeProposalContent(initialContent, fallbackText, fallbackMode),
     immediatelyRender: true,
     editorProps: {
       attributes: {
         class: "proposal-content-editor-surface",
-        "aria-label": "Proposal section content",
+        "aria-label": ariaLabel,
       },
     },
     onUpdate: ({ editor: currentEditor }) => {
-      const content = normalizeProposalContent(currentEditor.getJSON(), currentEditor.getText());
+      const content = normalizeProposalContent(currentEditor.getJSON(), currentEditor.getText(), fallbackMode);
       onChange(content, proposalContentToPlainText(content));
     },
   });

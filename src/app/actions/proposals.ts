@@ -22,7 +22,11 @@ import {
   type ProposalAlternate,
 } from "@/lib/proposal-alternates";
 import { parseProposalSectionType } from "@/lib/proposal-sections";
-import { parseProposalContentJson, proposalContentToPlainText } from "@/lib/proposal-content";
+import {
+  normalizeProposalContent,
+  parseProposalContentJson,
+  proposalContentToPlainText,
+} from "@/lib/proposal-content";
 import { selectDefaultProposalContact } from "@/lib/proposal-contacts";
 import { roundHoursUp } from "@/lib/time-increments";
 import { Policies } from "@/lib/auth/action-policy";
@@ -343,12 +347,17 @@ export async function createProposalAction(
 
   const { data: settings, error: settingsError } = await supabase
     .from("company_settings")
-    .select("default_payment_terms,default_proposal_terms")
+    .select("default_payment_terms,default_proposal_terms,default_proposal_terms_json")
     .limit(1)
     .single();
   if (settingsError) throw settingsError;
   if (!paymentTerms) paymentTerms = settings.default_payment_terms;
   const proposalTerms = resolveDefaultProposalTerms(settings.default_proposal_terms);
+  const proposalTermsJson = normalizeProposalContent(
+    settings.default_proposal_terms_json,
+    proposalTerms,
+    "numbered-sections",
+  );
 
   let parsedPaymentTerms: ReturnType<typeof parsePaymentTerms>;
   try {
@@ -386,6 +395,7 @@ export async function createProposalAction(
       estimated_materials: estimatedMaterials,
       payment_terms: parsedPaymentTerms,
       proposal_terms: proposalTerms,
+      proposal_terms_json: proposalTermsJson,
       validity_days: validityDays,
       billing_method: billingMethod,
       created_by: appUser.id,
@@ -539,17 +549,23 @@ export async function updateProposalRevisionAction(formData: FormData) {
   const paymentTerms = parsePaymentTerms(formData.get("payment_terms"));
   const validityDays = numberValue(formData.get("validity_days"), "Validity days", { min: 1 });
   const billingMethod = optionalText(formData.get("billing_method")) ?? "fixed_fee";
-  const proposalTerms = parseProposalTerms(formData.get("proposal_terms"));
+  const proposalTermsJson = parseProposalContentJson(
+    formData.get("proposal_terms_json"),
+    String(formData.get("proposal_terms") ?? ""),
+    "numbered-sections",
+  );
+  const proposalTerms = parseProposalTerms(proposalContentToPlainText(proposalTermsJson));
   const scopeSections = parseProposalSections(formData);
   const { feeItems, expenseItems, materialItems } = parseProposalItems(formData);
 
   const alternates = parseProposalAlternates(formData);
-  const { data: proposalId, error } = await admin.rpc("update_proposal_revision_draft_v7", {
+  const { data: proposalId, error } = await admin.rpc("update_proposal_revision_draft_v8", {
     p_revision_id: revisionId,
     p_payment_terms: paymentTerms,
     p_validity_days: validityDays,
     p_billing_method: billingMethod,
     p_proposal_terms: proposalTerms,
+    p_proposal_terms_json: proposalTermsJson,
     p_sections: scopeSections,
     p_fee_items: feeItems,
     p_expense_items: expenseItems,
@@ -580,7 +596,7 @@ export async function createProposalRevisionAction(proposalId: string) {
       .order("revision_number", { ascending: false })
       .limit(1)
       .single(),
-    admin.from("company_settings").select("default_proposal_terms").limit(1).single(),
+    admin.from("company_settings").select("default_proposal_terms,default_proposal_terms_json").limit(1).single(),
   ]);
 
   if (error) throw error;
@@ -600,6 +616,11 @@ export async function createProposalRevisionAction(proposalId: string) {
       payment_terms: current.payment_terms,
       proposal_terms: resolveDefaultProposalTerms(
         current.proposal_terms ?? settings.default_proposal_terms,
+      ),
+      proposal_terms_json: normalizeProposalContent(
+        current.proposal_terms_json ?? settings.default_proposal_terms_json,
+        resolveDefaultProposalTerms(current.proposal_terms ?? settings.default_proposal_terms),
+        "numbered-sections",
       ),
       validity_days: current.validity_days,
       internal_notes: current.internal_notes,

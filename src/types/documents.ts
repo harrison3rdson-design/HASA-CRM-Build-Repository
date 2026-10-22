@@ -32,6 +32,7 @@ export interface ProposalDocumentModel {
   paymentTerms: string;
   validityDays: number;
   proposalTerms?: string;
+  proposalTermsJson?: unknown;
   branding: CompanyBranding;
 }
 

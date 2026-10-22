@@ -78,8 +78,8 @@ ${body}
 
 export function renderProposalHtml(model: ProposalDocumentModel): string {
   const proposalTermsSection = model.proposalTerms
-    ? '<section style="page-break-before:always"><h1>Proposal Terms and Conditions</h1><div>'
-      + esc(model.proposalTerms).replaceAll("\n", "<br>")
+    ? '<section style="page-break-before:always"><h1>Proposal Terms and Conditions</h1><div class="proposal-rich-content">'
+      + proposalContentToSafeHtml(model.proposalTermsJson, model.proposalTerms, "numbered-sections")
       + "</div></section>"
     : "";
   const body = `

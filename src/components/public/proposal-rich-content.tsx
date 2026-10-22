@@ -1,6 +1,7 @@
 import { createElement, type ReactNode } from "react";
 import {
   normalizeProposalContent,
+  type ProposalContentFallbackMode,
   type ProposalContentNode,
 } from "@/lib/proposal-content";
 
@@ -35,11 +36,13 @@ function renderNode(node: ProposalContentNode, key: string): ReactNode {
 export function ProposalRichContent({
   contentJson,
   fallbackText,
+  fallbackMode = "standard",
 }: {
   contentJson?: unknown;
   fallbackText: string;
+  fallbackMode?: ProposalContentFallbackMode;
 }) {
-  const document = normalizeProposalContent(contentJson, fallbackText);
+  const document = normalizeProposalContent(contentJson, fallbackText, fallbackMode);
   return (
     <div className="proposal-rich-content">
       {(document.content ?? []).map((node, index) => renderNode(node, `proposal-content-${index}`))}

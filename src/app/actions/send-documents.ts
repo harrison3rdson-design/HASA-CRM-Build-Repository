@@ -10,6 +10,7 @@ import { resolveAppUrl } from "@/lib/app-url";
 import { isTwilioConfigured } from "@/lib/messaging/twilio";
 import { isTransactionalEmailConfigured } from "@/lib/messaging/email";
 import { resolveDefaultProposalTerms } from "@/lib/proposal-terms";
+import { normalizeProposalContent, proposalContentToPlainText } from "@/lib/proposal-content";
 
 type SendDocumentResult =
   | { ok: true; url: string; results: Awaited<ReturnType<typeof deliverPublicLink>> }
@@ -51,7 +52,7 @@ export async function sendProposalAction(input: {
 
   const { data: revision, error: revisionError } = await admin
     .from("proposal_revisions")
-    .select("proposal_id,revision_number,locked,proposal_terms")
+    .select("proposal_id,revision_number,locked,proposal_terms,proposal_terms_json")
     .eq("id", input.revisionId)
     .single();
   if (revisionError) throw revisionError;
@@ -64,17 +65,28 @@ export async function sendProposalAction(input: {
     throw new Error("Only an unsent draft or a sent proposal awaiting authorization can be delivered.");
   }
 
-  if (isInitialSend && !revision.proposal_terms) {
+  if (isInitialSend && (!revision.proposal_terms || !revision.proposal_terms_json)) {
     const { data: settings, error: settingsError } = await admin
       .from("company_settings")
-      .select("default_proposal_terms")
+      .select("default_proposal_terms,default_proposal_terms_json")
       .limit(1)
       .single();
     if (settingsError) throw settingsError;
 
+    const proposalTerms = resolveDefaultProposalTerms(
+      revision.proposal_terms ?? settings.default_proposal_terms,
+    );
+    const proposalTermsJson = normalizeProposalContent(
+      revision.proposal_terms_json ?? settings.default_proposal_terms_json,
+      proposalTerms,
+      "numbered-sections",
+    );
     const { data: stampedRevision, error: stampError } = await admin
       .from("proposal_revisions")
-      .update({ proposal_terms: resolveDefaultProposalTerms(settings.default_proposal_terms) })
+      .update({
+        proposal_terms: proposalContentToPlainText(proposalTermsJson),
+        proposal_terms_json: proposalTermsJson,
+      })
       .eq("id", input.revisionId)
       .eq("locked", false)
       .select("id")

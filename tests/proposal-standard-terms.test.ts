@@ -40,11 +40,13 @@ describe("standard proposal terms", () => {
 
     expect(actions).toContain("proposal_terms: proposalTerms");
     expect(actions).toContain("current.proposal_terms ?? settings.default_proposal_terms");
-    expect(actions).toContain('rpc("update_proposal_revision_draft_v7"');
-    expect(settingsAction).toContain("default_proposal_terms: parseProposalTerms");
+    expect(actions).toContain('rpc("update_proposal_revision_draft_v8"');
+    expect(actions).toContain("proposal_terms_json: proposalTermsJson");
+    expect(settingsAction).toContain("default_proposal_terms_json: proposalTermsJson");
     expect(settingsForm).toContain("Default Proposal Terms and Conditions");
-    expect(revisionForm).toContain('name="proposal_terms"');
-    expect(sendAction).toContain("if (isInitialSend && !revision.proposal_terms)");
+    expect(settingsForm).toContain("ProposalTermsEditorField");
+    expect(revisionForm).toContain('textName="proposal_terms"');
+    expect(sendAction).toContain("!revision.proposal_terms_json");
   });
 
   it("renders the preserved terms in customer views and as the last executed-PDF section", () => {
@@ -54,6 +56,7 @@ describe("standard proposal terms", () => {
 
     expect(customerDocument).toContain("proposal-terms-page");
     expect(customerDocument).toContain("revision.proposal_terms");
+    expect(customerDocument).toContain('fallbackMode="numbered-sections"');
     expect(publicCss).toContain("page-break-before:always");
     expect(executedPdf).toContain("proposalTermsSection");
     expect(executedPdf.indexOf("${escapeHtml(metadata.acceptedAt)}"))

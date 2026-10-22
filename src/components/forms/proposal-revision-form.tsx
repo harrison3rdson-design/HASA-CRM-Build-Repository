@@ -16,6 +16,7 @@ import {
   ProposalScopeFields,
   type ScopeSectionValue,
 } from "@/components/forms/proposal-scope-fields";
+import { ProposalTermsEditorField } from "@/components/forms/proposal-terms-editor-field";
 import { PAYMENT_TERMS, type PaymentTerms } from "@/lib/payment-terms";
 import { proposalRevisionLabel } from "@/lib/proposal-revisions";
 
@@ -34,6 +35,7 @@ export function ProposalRevisionForm({
     revision_number: number;
     payment_terms: PaymentTerms;
     proposal_terms: string;
+    proposal_terms_json?: unknown;
     validity_days: number;
     billing_method: string | null;
   };
@@ -84,11 +86,14 @@ export function ProposalRevisionForm({
 
       <ProposalAlternatesFields initialAlternates={alternates} />
 
-      <label className="full">
-        Proposal Terms and Conditions
-        <textarea name="proposal_terms" rows={30} defaultValue={revision.proposal_terms} required />
-        <span>These terms appear as the final section of the customer proposal and become permanent when this version is sent.</span>
-      </label>
+      <ProposalTermsEditorField
+        textName="proposal_terms"
+        jsonName="proposal_terms_json"
+        initialText={revision.proposal_terms}
+        initialContent={revision.proposal_terms_json}
+        label="Proposal Terms and Conditions"
+        helpText="Use headings, emphasis, and lists. These exact terms become permanent when this version is sent."
+      />
 
       <div className="full button-row">
         <button className="primary-button" type="submit">Save {revisionLabel}</button>

@@ -16,6 +16,7 @@ type ProposalDocumentProps = {
     payment_terms: string;
     validity_days: number | string;
     proposal_terms?: string | null;
+    proposal_terms_json?: unknown;
     locked: boolean;
   };
   proposal: {
@@ -63,6 +64,7 @@ type ProposalDocumentProps = {
     display_name: string;
     legal_name: string;
     default_proposal_terms?: string | null;
+    default_proposal_terms_json?: unknown;
   };
 };
 
@@ -97,6 +99,8 @@ export function ProposalDocument({
 }: ProposalDocumentProps) {
   const proposalTerms = revision.proposal_terms
     ?? (revision.locked ? "" : resolveDefaultProposalTerms(company.default_proposal_terms));
+  const proposalTermsJson = revision.proposal_terms_json
+    ?? (revision.locked ? undefined : company.default_proposal_terms_json);
   const showMaterialsSummary = materials.length > 0 || Number(revision.estimated_materials ?? 0) !== 0;
 
   return (
@@ -238,7 +242,11 @@ export function ProposalDocument({
           <p className="public-muted">
             Incorporated into Proposal #{proposal.proposal_number} · {proposalRevisionLabel(revision.revision_number)}
           </p>
-          <div className="proposal-terms-text">{proposalTerms}</div>
+          <ProposalRichContent
+            contentJson={proposalTermsJson}
+            fallbackText={proposalTerms}
+            fallbackMode="numbered-sections"
+          />
         </article>
       ) : null}
     </>

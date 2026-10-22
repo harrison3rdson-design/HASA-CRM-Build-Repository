@@ -323,6 +323,8 @@ export default async function ProposalDetailPage({
                 proposal_terms: resolveDefaultProposalTerms(
                   latest.proposal_terms ?? d.companyDefaultProposalTerms,
                 ),
+                proposal_terms_json: latest.proposal_terms_json
+                  ?? (!latest.locked ? d.companyDefaultProposalTermsJson : undefined),
                 validity_days: latest.validity_days,
                 billing_method: latest.billing_method,
               }}
@@ -441,12 +443,15 @@ export default async function ProposalDetailPage({
           </Panel>
 
           <Panel title="Proposal Terms and Conditions">
-            <p className="preline">
-              {latest.proposal_terms
+            <ProposalRichContent
+              contentJson={latest.proposal_terms_json
+                ?? (!latest.locked ? d.companyDefaultProposalTermsJson : undefined)}
+              fallbackText={latest.proposal_terms
                 ?? (!latest.locked
                   ? resolveDefaultProposalTerms(d.companyDefaultProposalTerms)
                   : "No proposal-specific terms were included with this legacy version.")}
-            </p>
+              fallbackMode="numbered-sections"
+            />
           </Panel>
 
           <Panel title="Customer-Selectable Alternates">

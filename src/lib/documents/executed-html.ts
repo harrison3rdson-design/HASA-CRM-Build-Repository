@@ -18,15 +18,19 @@ export function executedProposalHtml(
   const hasaLogoDataUri = hasaHorizontalLogoDataUri();
   const showMaterialsSummary = (data.materials ?? []).length > 0
     || Number(data.revision.estimated_materials ?? 0) !== 0;
-  const proposalTerms = escapeHtml(data.revision.proposal_terms ?? "").replace(/\n/g, "<br>");
+  const proposalTerms = proposalContentToSafeHtml(
+    data.revision.proposal_terms_json,
+    data.revision.proposal_terms ?? "",
+    "numbered-sections",
+  );
   const proposalTermsSection = proposalTerms
     ? '<section class="proposal-terms"><h1>Proposal Terms and Conditions</h1><p>Incorporated into Proposal #'
       + escapeHtml(data.proposal.proposal_number)
       + " · "
       + escapeHtml(proposalRevisionLabel(data.revision.revision_number))
-      + "</p><p>"
+      + '</p><div class="proposal-rich-content">'
       + proposalTerms
-      + "</p></section>"
+      + "</div></section>"
     : "";
   const sections = (data.sections ?? []).map((section: any) =>
     `<section><h2>${escapeHtml(section.heading ?? section.section_type)}</h2><div class="proposal-rich-content">${proposalContentToSafeHtml(section.content_json ?? section.contentJson, section.content ?? "")}</div></section>`
@@ -72,7 +76,7 @@ export function executedProposalHtml(
     .alternate-decisions{page-break-inside:avoid}.decision{font-weight:bold}.selected{color:#17633f}.declined{color:#8f1d18}
     .acceptance-record{border:2px solid #21845a;background:#f2fbf6;page-break-inside:avoid}
     .acceptance-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px 24px}.signature{margin-top:14px;padding-top:10px;border-top:1px solid #91c8aa;font-size:15pt;font-weight:bold}
-    .proposal-terms{page-break-before:always}.proposal-terms p{font-size:9pt;line-height:1.45}
+    .proposal-terms{page-break-before:always}.proposal-terms .proposal-rich-content{font-size:9pt;line-height:1.5}
   </style></head><body>
     <header><img src="${hasaLogoDataUri}" alt="HASA Concepts">
     <div class="document-meta"><h1>ACCEPTED PROPOSAL</h1><div>Proposal #${escapeHtml(data.proposal.proposal_number)} · ${escapeHtml(proposalRevisionLabel(data.revision.revision_number))}</div><div>Acceptance ID: ${escapeHtml(metadata.acceptanceVersionId)}</div></div></header>

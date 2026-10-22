@@ -48,11 +48,20 @@ export function executedProposalHtml(
     `<tr><td>${escapeHtml(material.description)}</td><td>${escapeHtml(material.quantity)} ${escapeHtml(material.unit)}</td><td>${money(material.unit_price)}</td><td>${money(material.amount)}</td></tr>`
   ).join("");
 
+  const alternateDescription = (alternate: typeof metadata.selection.selected[number]) => {
+    const description = proposalContentToSafeHtml(
+      alternate.description_json,
+      alternate.description ?? "",
+    );
+    return description
+      ? `<div class="proposal-rich-content alternate-description">${description}</div>`
+      : "";
+  };
   const selectedAlternates = metadata.selection.selected.map((alternate) =>
-    `<tr><td><strong>${escapeHtml(alternate.title)}</strong>${alternate.description ? `<br><span class="muted">${escapeHtml(alternate.description)}</span>` : ""}</td><td class="decision selected">Selected</td><td>+${money(alternate.amount)}</td></tr>`
+    `<tr><td><strong>${escapeHtml(alternate.title)}</strong>${alternateDescription(alternate)}</td><td class="decision selected">Selected</td><td>+${money(alternate.amount)}</td></tr>`
   ).join("");
   const declinedAlternates = metadata.selection.declined.map((alternate) =>
-    `<tr><td><strong>${escapeHtml(alternate.title)}</strong>${alternate.description ? `<br><span class="muted">${escapeHtml(alternate.description)}</span>` : ""}</td><td class="decision declined">Declined</td><td>+${money(alternate.amount)}</td></tr>`
+    `<tr><td><strong>${escapeHtml(alternate.title)}</strong>${alternateDescription(alternate)}</td><td class="decision declined">Declined</td><td>+${money(alternate.amount)}</td></tr>`
   ).join("");
   const allAlternates = selectedAlternates + declinedAlternates;
 
@@ -73,7 +82,7 @@ export function executedProposalHtml(
     .proposal-summary-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #c5d2dc}
     .proposal-summary-row.total{margin-top:3px;padding-top:9px;border-top:2px solid #315d7d;border-bottom:0;color:#17364f;font-size:13pt}
     .proposal-commercial-terms{display:flex;gap:30px;margin-top:12px;padding-top:10px;border-top:1px solid #c5d2dc;font-size:9pt}
-    .alternate-decisions{page-break-inside:avoid}.decision{font-weight:bold}.selected{color:#17633f}.declined{color:#8f1d18}
+    .alternate-decisions{page-break-inside:avoid}.alternate-description{margin-top:5px;color:#5d6b78;font-size:8.5pt}.alternate-description h2,.alternate-description h3,.alternate-description h4{margin:8px 0 4px;font-size:9pt}.decision{font-weight:bold}.selected{color:#17633f}.declined{color:#8f1d18}
     .acceptance-record{border:2px solid #21845a;background:#f2fbf6;page-break-inside:avoid}
     .acceptance-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px 24px}.signature{margin-top:14px;padding-top:10px;border-top:1px solid #91c8aa;font-size:15pt;font-weight:bold}
     .proposal-terms{page-break-before:always}.proposal-terms .proposal-rich-content{font-size:9pt;line-height:1.5}

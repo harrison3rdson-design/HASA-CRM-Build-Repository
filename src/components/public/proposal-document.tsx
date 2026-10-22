@@ -198,11 +198,18 @@ export function ProposalDocument({
               <div className="public-table public-alternate-list">
                 {alternates.map((alternate) => (
                   <div key={alternate.alternate_key}>
-                    <span>
-                      {alternate.title}
-                      {alternate.description ? <small className="public-alternate-description">{alternate.description}</small> : null}
+                    <div className="public-alternate-copy">
+                      <strong className="public-alternate-title">{alternate.title}</strong>
+                      {alternate.description || alternate.description_json ? (
+                        <div className="public-alternate-description">
+                          <ProposalRichContent
+                            contentJson={alternate.description_json}
+                            fallbackText={alternate.description ?? ""}
+                          />
+                        </div>
+                      ) : null}
                       <small className="public-alternate-rule">{alternateTypeLabel(alternate.alternate_type)}</small>
-                    </span>
+                    </div>
                     <strong>+{money(alternate.amount)}</strong>
                   </div>
                 ))}

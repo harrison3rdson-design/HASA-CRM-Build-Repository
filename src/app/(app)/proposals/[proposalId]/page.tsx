@@ -75,6 +75,7 @@ type AlternateRecord = {
   alternate_key: string;
   title: string;
   description: string | null;
+  description_json?: unknown;
   alternate_type: "independent" | "dependent" | "bundle";
   amount: number | string;
   required_alternate_key: string | null;
@@ -218,6 +219,10 @@ export default async function ProposalDetailPage({
       alternateKey: alternate.alternate_key,
       title: alternate.title,
       description: String(alternate.description ?? ""),
+      descriptionJson: normalizeProposalContent(
+        alternate.description_json,
+        String(alternate.description ?? ""),
+      ),
       alternateType: alternate.alternate_type,
       amount: String(alternate.amount),
       requiredAlternateKey: String(alternate.required_alternate_key ?? ""),
@@ -457,7 +462,7 @@ export default async function ProposalDetailPage({
           <Panel title="Customer-Selectable Alternates">
             {(d.alternates as AlternateRecord[]).filter((alternate)=>alternate.proposal_revision_id===latest.id).length ? (
               <div className="table-wrap"><table><thead><tr><th>Alternate</th><th>Rule</th><th>Description</th><th>Add to Contract</th></tr></thead>
-              <tbody>{(d.alternates as AlternateRecord[]).filter((alternate)=>alternate.proposal_revision_id===latest.id).map((alternate)=><tr key={alternate.id}><td>{alternate.title}</td><td className="capitalize">{alternate.alternate_type}</td><td>{alternate.description??"—"}</td><td>{money(alternate.amount)}</td></tr>)}</tbody></table></div>
+              <tbody>{(d.alternates as AlternateRecord[]).filter((alternate)=>alternate.proposal_revision_id===latest.id).map((alternate)=><tr key={alternate.id}><td>{alternate.title}</td><td className="capitalize">{alternate.alternate_type}</td><td>{alternate.description||alternate.description_json?<ProposalRichContent contentJson={alternate.description_json} fallbackText={alternate.description??""}/>:"—"}</td><td>{money(alternate.amount)}</td></tr>)}</tbody></table></div>
             ) : <p className="footnote">This version has no customer-selectable alternates.</p>}
           </Panel>
         </> : null}

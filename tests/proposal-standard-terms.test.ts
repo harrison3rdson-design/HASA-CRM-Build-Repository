@@ -40,7 +40,7 @@ describe("standard proposal terms", () => {
 
     expect(actions).toContain("proposal_terms: proposalTerms");
     expect(actions).toContain("current.proposal_terms ?? settings.default_proposal_terms");
-    expect(actions).toContain('rpc("update_proposal_revision_draft_v8"');
+    expect(actions).toContain('rpc("update_proposal_revision_draft_v9"');
     expect(actions).toContain("proposal_terms_json: proposalTermsJson");
     expect(settingsAction).toContain("default_proposal_terms_json: proposalTermsJson");
     expect(settingsForm).toContain("Default Proposal Terms and Conditions");

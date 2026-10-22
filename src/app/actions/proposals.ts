@@ -253,7 +253,12 @@ function parseProposalAlternates(formData: FormData): ProposalAlternate[] {
 
   for (let index = 0; index < count; index += 1) {
     const title = optionalText(formData.get(`alternate_title_${index}`));
-    const description = optionalText(formData.get(`alternate_description_${index}`));
+    const fallbackDescription = optionalText(formData.get(`alternate_description_${index}`)) ?? "";
+    const descriptionJson = parseProposalContentJson(
+      formData.get(`alternate_description_json_${index}`),
+      fallbackDescription,
+    );
+    const description = optionalText(proposalContentToPlainText(descriptionJson));
     const amountText = optionalText(formData.get(`alternate_amount_${index}`));
     const type = parseProposalAlternateType(formData.get(`alternate_type_${index}`));
     const requiredAlternateKey = optionalText(formData.get(`alternate_requires_key_${index}`));
@@ -270,6 +275,7 @@ function parseProposalAlternates(formData: FormData): ProposalAlternate[] {
       ),
       title: requiredText(title, `Alternate ${index + 1} title`),
       description,
+      description_json: description ? descriptionJson : null,
       alternate_type: type,
       amount: numberValue(amountText, `Alternate ${index + 1} price`, { min: 0 }),
       required_alternate_key: type === "dependent" ? requiredAlternateKey : null,
@@ -559,7 +565,7 @@ export async function updateProposalRevisionAction(formData: FormData) {
   const { feeItems, expenseItems, materialItems } = parseProposalItems(formData);
 
   const alternates = parseProposalAlternates(formData);
-  const { data: proposalId, error } = await admin.rpc("update_proposal_revision_draft_v8", {
+  const { data: proposalId, error } = await admin.rpc("update_proposal_revision_draft_v9", {
     p_revision_id: revisionId,
     p_payment_terms: paymentTerms,
     p_validity_days: validityDays,

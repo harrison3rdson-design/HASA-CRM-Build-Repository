@@ -1,16 +1,31 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   PROPOSAL_ALTERNATE_TYPES,
   type ProposalAlternateType,
 } from "@/lib/proposal-alternates";
+import {
+  legacyTextToProposalDocument,
+  type ProposalContentDocument,
+} from "@/lib/proposal-content";
+
+const ProposalContentEditor = dynamic(
+  () => import("@/components/forms/proposal-content-editor")
+    .then((module) => module.ProposalContentEditor),
+  {
+    ssr: false,
+    loading: () => <div className="proposal-content-editor is-loading" aria-label="Loading alternate description editor" />,
+  },
+);
 
 export type AlternateLineValue = {
   id: string;
   alternateKey: string;
   title: string;
   description: string;
+  descriptionJson?: ProposalContentDocument | null;
   alternateType: ProposalAlternateType;
   amount: string;
   requiredAlternateKey: string;
@@ -31,6 +46,7 @@ function blankAlternate(id: string, alternateKey: string): AlternateLineValue {
     alternateKey,
     title: "",
     description: "",
+    descriptionJson: legacyTextToProposalDocument(""),
     alternateType: "independent",
     amount: "",
     requiredAlternateKey: "",
@@ -155,16 +171,34 @@ export function ProposalAlternatesFields({
                     placeholder="$0.00"
                   />
                 </label>
-                <label className="alternate-description">
-                  Description
-                  <textarea
+                <div className="alternate-description scope-content">
+                  <span className="scope-content-label">Description</span>
+                  <input
+                    type="hidden"
                     name={`alternate_description_${index}`}
-                    rows={3}
                     value={alternate.description}
-                    onChange={(event) => updateAlternate(alternate.id, { description: event.target.value })}
-                    placeholder="Describe the optional work and deliverables."
                   />
-                </label>
+                  <input
+                    type="hidden"
+                    name={`alternate_description_json_${index}`}
+                    value={JSON.stringify(
+                      alternate.descriptionJson
+                        ?? legacyTextToProposalDocument(alternate.description),
+                    )}
+                  />
+                  <ProposalContentEditor
+                    initialContent={alternate.descriptionJson}
+                    fallbackText={alternate.description}
+                    ariaLabel={`Alternate ${index + 1} description`}
+                    onChange={(descriptionJson, description) => updateAlternate(
+                      alternate.id,
+                      { descriptionJson, description },
+                    )}
+                  />
+                  <span className="scope-content-help">
+                    Use headings, emphasis, and lists here. This formatting will appear in the customer preview and accepted PDF.
+                  </span>
+                </div>
 
                 {alternate.alternateType === "dependent" ? (
                   <label className="alternate-rule-detail">

@@ -128,6 +128,29 @@ describe("immutable accepted proposal package", () => {
     expect(delivery).toContain('{ kind: "hasa"');
   });
 
+  it("preserves rich alternate descriptions from editing through preview and final PDF", () => {
+    const migration = read("supabase/migrations/20261022171741_proposal_alternate_rich_content.sql");
+    const editor = read("src/components/forms/proposal-alternates-fields.tsx");
+    const action = read("src/app/actions/proposals.ts");
+    const document = read("src/components/public/proposal-document.tsx");
+    const acceptance = read("src/components/public/acceptance-card.tsx");
+    const preview = read("src/components/public/acceptance-preview-card.tsx");
+    const pdf = read("src/lib/documents/executed-html.ts");
+
+    expect(editor).toContain("ProposalContentEditor");
+    expect(editor).toContain("alternate_description_json_");
+    expect(action).toContain("description_json: description ? descriptionJson : null");
+    expect(action).toContain('rpc("update_proposal_revision_draft_v9"');
+    expect(document).toContain("contentJson={alternate.description_json}");
+    expect(acceptance).toContain("contentJson={alternate.description_json}");
+    expect(preview).toContain("contentJson={alternate.description_json}");
+    expect(pdf).toContain("proposalContentToSafeHtml");
+    expect(pdf).toContain("alternate.description_json");
+    expect(migration).toContain("add column if not exists description_json jsonb");
+    expect(migration).toContain("update_proposal_revision_draft_v9");
+    expect(migration).toContain("'4'::jsonb");
+  });
+
   it("keeps mirrored public acceptance and proposal pages synchronized", () => {
     expect(read("app/api/public/proposals/[token]/accept/route.ts"))
       .toBe(read("src/app/api/public/proposals/[token]/accept/route.ts"));

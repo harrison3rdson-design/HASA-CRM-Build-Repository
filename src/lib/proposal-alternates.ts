@@ -9,6 +9,7 @@ export type ProposalAlternate = {
   alternate_key: string;
   title: string;
   description?: string | null;
+  description_json?: unknown;
   alternate_type: ProposalAlternateType;
   amount: number | string;
   required_alternate_key?: string | null;

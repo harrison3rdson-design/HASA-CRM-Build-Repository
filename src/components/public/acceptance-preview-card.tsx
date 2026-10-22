@@ -1,5 +1,6 @@
 import type { ProposalAlternate } from "@/lib/proposal-alternates";
 import { money } from "@/lib/ui/format";
+import { ProposalRichContent } from "@/components/public/proposal-rich-content";
 
 export function AcceptancePreviewCard({
   buttonText = "Accept Proposal",
@@ -24,16 +25,23 @@ export function AcceptancePreviewCard({
         <legend>Contract Choices</legend>
         <label className="public-choice-card public-choice-required">
           <input type="checkbox" checked readOnly />
-          <span><strong>Base Proposal Scope</strong><small>Required and cannot be removed</small></span>
+          <div className="public-choice-copy"><strong>Base Proposal Scope</strong><small>Required and cannot be removed</small></div>
           <strong>{money(baseTotal)}</strong>
         </label>
         {alternates.map((alternate) => (
           <label className="public-choice-card" key={alternate.alternate_key}>
             <input type="checkbox" />
-            <span>
+            <div className="public-choice-copy">
               <strong>{alternate.title}</strong>
-              {alternate.description ? <small className="public-choice-description">{alternate.description}</small> : null}
-            </span>
+              {alternate.description || alternate.description_json ? (
+                <div className="public-choice-description">
+                  <ProposalRichContent
+                    contentJson={alternate.description_json}
+                    fallbackText={alternate.description ?? ""}
+                  />
+                </div>
+              ) : null}
+            </div>
             <strong>+{money(alternate.amount)}</strong>
           </label>
         ))}

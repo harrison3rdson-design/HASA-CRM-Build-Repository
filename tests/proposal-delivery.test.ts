@@ -4,6 +4,10 @@ import { describe, expect, it } from "vitest";
 import { hasAppUrl, resolveAppUrl } from "../src/lib/app-url";
 import { isTwilioConfigured } from "../src/lib/messaging/twilio";
 import { formatTransactionalSms } from "../src/lib/messaging/sms-body";
+import {
+  CUSTOMER_FACING_EMAIL_CC,
+} from "../src/lib/delivery/customer-email-recipients";
+import { normalizeEmailCcRecipients } from "../src/lib/messaging/email";
 
 describe("proposal delivery configuration", () => {
   it("uses Vercel's stable production domain when no custom app URL is set", () => {
@@ -56,5 +60,25 @@ describe("proposal delivery configuration", () => {
     expect(action).toContain('message: "Proposal delivery failed"');
     expect(button).toContain("if (!result.ok)");
     expect(button).toContain("setError(result.error)");
+  });
+
+  it("carbon copies Andy on every customer-facing email without duplicate recipients", () => {
+    const sharedDelivery = readFileSync(resolve("src/lib/delivery/send-document.ts"), "utf8");
+    const acceptedProposal = readFileSync(
+      resolve("src/lib/delivery/accepted-proposal-package.ts"),
+      "utf8",
+    );
+
+    expect(CUSTOMER_FACING_EMAIL_CC).toBe("andy.harrison@hasaconcepts.com");
+    expect(sharedDelivery).toContain("cc: CUSTOMER_FACING_EMAIL_CC");
+    expect(acceptedProposal).toContain(
+      'cc: recipient.kind === "customer" ? CUSTOMER_FACING_EMAIL_CC : undefined',
+    );
+    expect(normalizeEmailCcRecipients("client@example.com", [
+      CUSTOMER_FACING_EMAIL_CC,
+      "Andy.Harrison@hasaconcepts.com",
+    ])).toEqual([CUSTOMER_FACING_EMAIL_CC]);
+    expect(normalizeEmailCcRecipients(CUSTOMER_FACING_EMAIL_CC, CUSTOMER_FACING_EMAIL_CC))
+      .toEqual([]);
   });
 });

@@ -1,5 +1,6 @@
 export type EmailSendInput = {
   to: string;
+  cc?: string | string[];
   subject: string;
   text: string;
   html?: string;
@@ -10,6 +11,25 @@ export type EmailSendInput = {
     contentType?: string;
   }>;
 };
+
+export function normalizeEmailCcRecipients(
+  to: string,
+  cc: EmailSendInput["cc"],
+): string[] {
+  const primaryRecipient = to.trim().toLowerCase();
+  const recipients = Array.isArray(cc) ? cc : cc ? [cc] : [];
+  const unique = new Map<string, string>();
+
+  for (const recipient of recipients) {
+    const trimmed = recipient.trim();
+    const normalized = trimmed.toLowerCase();
+    if (trimmed && normalized !== primaryRecipient && !unique.has(normalized)) {
+      unique.set(normalized, trimmed);
+    }
+  }
+
+  return [...unique.values()];
+}
 
 export type EmailDeliveryResult = {
   provider: string;
@@ -38,6 +58,7 @@ export class TransactionalEmailProvider {
       return { provider: "email", status: "failed", errorMessage: "Email provider environment variables are incomplete." };
     }
 
+    const cc = normalizeEmailCcRecipients(input.to, input.cc);
     const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
@@ -50,6 +71,7 @@ export class TransactionalEmailProvider {
       body: JSON.stringify({
         from,
         to: [input.to],
+        cc: cc.length ? cc : undefined,
         subject: input.subject,
         text: input.text,
         html: input.html,

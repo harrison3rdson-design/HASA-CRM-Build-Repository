@@ -5,6 +5,7 @@ import {
 } from "@/lib/messaging/email";
 import { DEFAULT_CUSTOMER_ACTION_NOTIFICATION_EMAIL } from "@/lib/delivery/customer-action-notification";
 import { money } from "@/lib/ui/format";
+import { CUSTOMER_FACING_EMAIL_CC } from "@/lib/delivery/customer-email-recipients";
 
 type AcceptedProposalPackageInput = {
   proposalId: string;
@@ -50,6 +51,7 @@ async function sendToRecipient(
   try {
     return await provider.sendEmail({
       to: recipient.email,
+      cc: recipient.kind === "customer" ? CUSTOMER_FACING_EMAIL_CC : undefined,
       subject,
       text: `${summary}\n\nPlease retain the attached PDF for your records.`,
       html: `<p>${escapeHtml(summary)}</p><p>Please retain the attached PDF for your records.</p>`,

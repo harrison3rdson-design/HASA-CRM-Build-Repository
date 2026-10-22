@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase-admin";
 import { TwilioSmsProvider } from "@/lib/messaging/twilio";
 import { TransactionalEmailProvider } from "@/lib/messaging/email";
 import { formatTransactionalSms } from "@/lib/messaging/sms-body";
+import { CUSTOMER_FACING_EMAIL_CC } from "@/lib/delivery/customer-email-recipients";
 
 export async function deliverPublicLink(input: {
   documentType: "proposal" | "additional_service" | "invoice";
@@ -31,6 +32,7 @@ export async function deliverPublicLink(input: {
   if ((input.method === "email" || input.method === "both") && input.email) {
     const r = await email.sendEmail({
       to: input.email,
+      cc: CUSTOMER_FACING_EMAIL_CC,
       subject: input.subject,
       text: `${input.message}\n\n${input.url}`,
       html: `<p>${input.message}</p><p><a href="${input.url}">Open document</a></p>`,

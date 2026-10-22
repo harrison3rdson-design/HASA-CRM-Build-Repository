@@ -12,6 +12,7 @@ export interface SmsProvider {
 export interface EmailProvider {
   sendEmail(input: {
     to: string;
+    cc?: string | string[];
     subject: string;
     html: string;
     text?: string;

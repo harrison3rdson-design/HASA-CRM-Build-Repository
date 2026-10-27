@@ -26,6 +26,7 @@ export default async function ClientDetailPage({
         ) : null}
       </div>
 
+      <Panel title="Properties and Recurring Services"><Link href={`/properties?clientId=${clientId}`}>Manage Client Properties</Link> · <Link href="/services">Service Agreements</Link></Panel>
       <Panel title="Client Information">
         <DetailGrid>
           <DetailItem label="Billing Name" value={d.client.billing_name} />

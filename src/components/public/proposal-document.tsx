@@ -2,6 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { money } from "@/lib/ui/format";
 import { proposalRevisionLabel } from "@/lib/proposal-revisions";
+import { ServiceTermsSummary } from "@/components/services/terms-summary";
+import type { ServiceTerms } from "@/lib/services/terms";
 import { resolveDefaultProposalTerms } from "@/lib/proposal-terms";
 import type { ProposalAlternate } from "@/lib/proposal-alternates";
 import { ProposalRichContent } from "@/components/public/proposal-rich-content";
@@ -17,6 +19,7 @@ type ProposalDocumentProps = {
     validity_days: number | string;
     proposal_terms?: string | null;
     proposal_terms_json?: unknown;
+    service_terms?: ServiceTerms | null;
     locked: boolean;
   };
   proposal: {
@@ -230,8 +233,9 @@ export function ProposalDocument({
               <div><span>Estimated Materials</span><strong>{money(revision.estimated_materials)}</strong></div>
             ) : null}
             <div><span>Estimated Expenses</span><strong>{money(revision.estimated_expenses)}</strong></div>
-            <div><span>Estimated Total</span><strong>{money(revision.estimated_total)}</strong></div>
+            <div><span>{revision.service_terms ? "One-time Estimated Total" : "Estimated Total"}</span><strong>{money(revision.estimated_total)}</strong></div>
           </div>
+          <ServiceTermsSummary terms={revision.service_terms} />
           <div className="proposal-commercial-terms">
             <p><strong>Payment Terms:</strong> {revision.payment_terms}</p>
             <p><strong>Proposal Validity:</strong> {revision.validity_days} days</p>

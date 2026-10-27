@@ -55,6 +55,7 @@ describe("phase 2 security hardening", () => {
       signerEmail: "jane@example.com",
       signerMobile: "+1 555 555 0100",
       selectedAlternateKeys: [],
+      recurringAccepted: false,
       signatureType: "typed",
       acceptanceStatement: "I accept and authorize this document.",
     });

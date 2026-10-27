@@ -30,6 +30,7 @@ export default async function PublicProposalPage({
         buttonText="Accept Proposal"
         alternates={alternates}
         baseTotal={revision.estimated_total}
+        serviceTerms={revision.service_terms}
         requireEmail
       />
     </main>

@@ -1,5 +1,6 @@
 "use server";
 
+import { parseServiceTerms } from "@/lib/services/terms";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase-admin";
@@ -303,10 +304,12 @@ export async function createProposalAction(
     paymentTerms: string | null;
     validityDays: number;
     billingMethod: string | null;
+    serviceTerms: ReturnType<typeof parseServiceTerms>;
   };
 
   try {
     proposalInput = {
+      serviceTerms: parseServiceTerms(formData.get("service_terms")),
       clientId: requiredText(formData.get("client_id"), "Client"),
       projectName: requiredText(formData.get("project_name"), "Project name"),
       requestedContactId: optionalText(formData.get("primary_contact_id")),
@@ -396,6 +399,7 @@ export async function createProposalAction(
     .insert({
       proposal_id: proposal.id,
       revision_number: 1,
+      service_terms: proposalInput.serviceTerms,
       professional_fee: professionalFee,
       estimated_expenses: estimatedExpenses,
       estimated_materials: estimatedMaterials,
@@ -565,7 +569,8 @@ export async function updateProposalRevisionAction(formData: FormData) {
   const { feeItems, expenseItems, materialItems } = parseProposalItems(formData);
 
   const alternates = parseProposalAlternates(formData);
-  const { data: proposalId, error } = await admin.rpc("update_proposal_revision_draft_v9", {
+  const { data: proposalId, error } = await admin.rpc("update_proposal_revision_draft_v10", {
+    p_service_terms: parseServiceTerms(formData.get("service_terms")),
     p_revision_id: revisionId,
     p_payment_terms: paymentTerms,
     p_validity_days: validityDays,
@@ -615,6 +620,7 @@ export async function createProposalRevisionAction(proposalId: string) {
     .insert({
       proposal_id: proposalId,
       revision_number: nextRevision,
+      service_terms: current.service_terms,
       professional_fee: current.professional_fee,
       estimated_expenses: current.estimated_expenses,
       estimated_materials: current.estimated_materials,
@@ -735,13 +741,14 @@ export async function recordManualProposalAuthorizationAction(
     const { data: revision, error: revisionError } = await admin
       .from("proposal_revisions")
       .select(`
-        id,proposal_id,revision_number,locked,created_at,
+        id,proposal_id,revision_number,locked,created_at,service_terms,
         proposal:proposals(id,proposal_number,client_id,current_revision,status)
       `)
       .eq("id", revisionId)
       .single();
     if (revisionError) throw revisionError;
 
+    if (revision.service_terms) throw new Error("Recurring agreements require customer acceptance using the proposal link, including the recurring-fee acknowledgement.");
     const proposal = Array.isArray(revision.proposal) ? revision.proposal[0] : revision.proposal;
     if (!proposal || proposal.id !== proposalId) throw new Error("The proposal version does not match this proposal.");
     if (proposal.current_revision !== revision.revision_number) {

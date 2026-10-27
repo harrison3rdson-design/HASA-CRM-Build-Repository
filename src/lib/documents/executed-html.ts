@@ -1,3 +1,4 @@
+import { SERVICE_CONDITIONS, monthlyTotal, type ServiceTerms } from "@/lib/services/terms";
 import { money } from "@/lib/ui/format";
 import { proposalRevisionLabel } from "@/lib/proposal-revisions";
 import { hasaHorizontalLogoDataUri } from "@/lib/branding/assets";
@@ -15,6 +16,8 @@ export function executedProposalHtml(
   signer: any,
   metadata: AcceptedProposalMetadata,
 ) {
+  const recurring = data.revision?.service_terms as ServiceTerms | null;
+  const recurringHtml = recurring ? `<section class="proposal-summary-area"><h2>Recurring Services — ${escapeHtml(recurring.name)}</h2><p><strong>${money(monthlyTotal(recurring))}/month for ${recurring.termMonths} months; total recurring commitment ${money(monthlyTotal(recurring)*recurring.termMonths)}.</strong> This is additional to the one-time total above.</p><p>Service ${money(recurring.monthlyFee)}/month; refresh ${money(recurring.refreshMonthlyFee)}/month; model capacity ${recurring.modelAllowance}; maintenance ${recurring.maintenanceMinutes} minutes/month.</p><p style="white-space:pre-wrap">${escapeHtml(recurring.scope)}</p><p style="white-space:pre-wrap">${escapeHtml(recurring.refreshScope)}</p><p>${escapeHtml(recurring.conditions ?? SERVICE_CONDITIONS)}</p></section>` : "";
   const hasaLogoDataUri = hasaHorizontalLogoDataUri();
   const showMaterialsSummary = (data.materials ?? []).length > 0
     || Number(data.revision.estimated_materials ?? 0) !== 0;
@@ -112,9 +115,10 @@ export function executedProposalHtml(
       <div class="proposal-summary-row"><span>Estimated Expenses</span><strong>${money(data.revision.estimated_expenses)}</strong></div>
       <div class="proposal-summary-row"><span>Base Contract</span><strong>${money(data.revision.estimated_total)}</strong></div>
       <div class="proposal-summary-row"><span>Selected Alternates</span><strong>${money(metadata.selection.alternateTotal)}</strong></div>
-      <div class="proposal-summary-row total"><span>Total Accepted Contract</span><strong>${money(metadata.selection.acceptedTotal)}</strong></div>
+      <div class="proposal-summary-row total"><span>${recurring ? "One-time Accepted Charges" : "Total Accepted Contract"}</span><strong>${money(metadata.selection.acceptedTotal)}</strong></div>
       <div class="proposal-commercial-terms"><span><strong>Payment Terms:</strong> ${escapeHtml(data.revision.payment_terms ?? "")}</span><span><strong>Proposal Validity:</strong> ${escapeHtml(data.revision.validity_days ?? "")} days</span></div>
     </section>
+    ${recurringHtml}
     <section class="acceptance-record">
       <span class="proposal-section-label">Electronic Acceptance Record</span>
       <h2>Accepted and Authorized</h2>

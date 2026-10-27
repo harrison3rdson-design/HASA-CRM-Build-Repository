@@ -20,7 +20,7 @@ export default async function InvoiceDetailPage({
   const primaryContact = normalizeRelatedContact(d.invoice.project?.primary_contact);
   const canSendInvoice = !d.invoice.sent_at
     && (d.invoice.status === "draft" || d.invoice.status === "issued");
-  const canDeleteDraft = d.invoice.status === "draft"
+  const canDeleteDraft = !d.invoice.service_agreement_id && d.invoice.status === "draft"
     && !d.invoice.locked
     && !d.invoice.issued_at
     && !d.invoice.sent_at

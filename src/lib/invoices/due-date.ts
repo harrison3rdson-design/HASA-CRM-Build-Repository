@@ -9,6 +9,7 @@ const PAYMENT_TERM_DAYS: Record<PaymentTerms, number> = {
 export const INVOICE_TIME_ZONE = "America/New_York";
 
 export function getPaymentTermDays(value: unknown): number {
+  if (value === "Due on Receipt") return 0;
   return PAYMENT_TERM_DAYS[parsePaymentTerms(value)];
 }
 

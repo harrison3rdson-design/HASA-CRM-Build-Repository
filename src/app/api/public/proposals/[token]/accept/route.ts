@@ -41,6 +41,10 @@ export async function POST(
     }
 
     const data = await getPublicProposalByToken(token);
+    if (data.revision.service_terms) {
+      if (!signer.recurringAccepted) throw new PublicRequestError("Accept the recurring service terms before continuing.", 400);
+      signer.acceptanceStatement += " I also accept the recurring service fees, fixed term, scope and conditions shown in this proposal.";
+    }
     let selection;
     try {
       selection = calculateAlternateSelection(

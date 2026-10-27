@@ -9,7 +9,7 @@ export async function getDashboardData(){
   const s=createAdminClient();
   const [{data:proposals},{data:projects},{data:invoices},{data:receipts}] = await Promise.all([
     s.from("proposals").select("id,status"),
-    s.from("projects").select("id,status"),
+    s.from("projects").select("id,status").not("project_number","like","SVC-%"),
     s.from("invoices").select("id,status,balance_due"),
     s.from("receipt_inbox").select("id,status")
   ]);
@@ -48,7 +48,7 @@ export async function getProjectOptions() {
   const { data, error } = await s
     .from("projects")
     .select("id,project_number,project_name")
-    .eq("status", "active")
+    .eq("status", "active").not("project_number", "like", "SVC-%")
     .order("project_number");
   if (error) throw error;
   return data ?? [];
@@ -60,7 +60,7 @@ export async function getProjectWorkOptions(): Promise<ProjectWorkOption[]> {
   const { data: projects, error: projectsError } = await s
     .from("projects")
     .select("id,project_number,project_name,source_revision_id")
-    .eq("status", "active")
+    .eq("status", "active").not("project_number", "like", "SVC-%")
     .order("project_number");
   if (projectsError) throw projectsError;
 
@@ -228,7 +228,7 @@ export async function getInvoiceFormData() {
   const [{ data: projects, error: projectsError }, { data: settings, error: settingsError }] = await Promise.all([
     s.from("project_invoice_context")
       .select("id,project_number,project_name,source_revision_id,authorized_fee,service_fee_authorized,billing_method")
-      .eq("status", "active")
+      .eq("status", "active").not("project_number", "like", "SVC-%")
       .order("project_number"),
     s.from("company_settings").select("default_payment_terms").limit(1).single(),
   ]);

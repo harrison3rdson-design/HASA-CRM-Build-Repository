@@ -40,11 +40,12 @@ export async function createInvoiceAction(formData: FormData) {
 
   const { data: project, error: projectError } = await admin
     .from("projects")
-    .select("client_id,source_revision_id")
+    .select("client_id,source_revision_id,project_number")
     .eq("id", projectId)
     .single();
 
   if (projectError) throw projectError;
+  if (project.project_number.startsWith("SVC-")) throw new Error("Create recurring invoices from the service agreement.");
 
   let inheritedPaymentTerms: string | null = null;
   if (project.source_revision_id) {

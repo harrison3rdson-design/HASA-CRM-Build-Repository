@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { ServiceTermsSummary } from "@/components/services/terms-summary";
+import { createAgreementAction } from "@/app/actions/services";
 import { Panel } from "@/components/cards";
 import { ProposalSummary } from "@/components/proposals/proposal-summary";
 import { CreateRevisionButton } from "@/components/proposals/revision-button";
@@ -322,6 +324,7 @@ export default async function ProposalDetailPage({
             <ProposalRevisionForm
               proposalId={proposalId}
               revision={{
+                service_terms: latest.service_terms,
                 id: latest.id,
                 revision_number: latest.revision_number,
                 payment_terms: parsePaymentTerms(latest.payment_terms),
@@ -386,7 +389,7 @@ export default async function ProposalDetailPage({
           <span className="proposal-area-badge">Read-only review</span>
         </header>
 
-        {latest ? <ProposalSummary revision={latest} /> : null}
+        {latest ? <><ProposalSummary revision={latest} /><ServiceTermsSummary terms={latest.service_terms} />{latest.service_terms && d.proposal.status === "accepted" ? <form action={createAgreementAction}><input type="hidden" name="revision_id" value={latest.id}/><button className="primary-button">Set Up Recurring Agreement</button></form> : null}</> : null}
 
         <Panel title="Proposal Version History">
           <div className="table-wrap"><table><thead><tr><th>Version</th><th>Date</th><th>Fee</th><th>Materials</th><th>Expenses</th><th>Total</th><th>Terms</th><th>Locked</th><th>Approved By</th><th>Approval Date</th></tr></thead>

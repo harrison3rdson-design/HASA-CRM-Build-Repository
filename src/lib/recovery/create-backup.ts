@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const RECOVERY_TABLES = [
+  "properties", "digital_twin_models", "service_agreements", "service_agreement_properties", "service_work_entries", "service_refresh_tasks",
   "activity_log",
   "additional_service_acceptances",
   "additional_service_expense_items",

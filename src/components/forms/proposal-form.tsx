@@ -1,4 +1,6 @@
 "use client";
+import { ServiceTermsFields } from "@/components/services/terms-fields";
+import type { ServiceTerms } from "@/lib/services/terms";
 
 import { useActionState, useState } from "react";
 import { createProposalAction } from "@/app/actions/proposals";
@@ -126,6 +128,7 @@ export function ProposalForm({
 
       <ProposalLineItemsFields />
 
+      <ServiceTermsFields />
       <ProposalAlternatesFields />
 
       <div className="full form-submit-row">

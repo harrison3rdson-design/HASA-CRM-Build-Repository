@@ -1,4 +1,6 @@
 "use client";
+import { ServiceTermsFields } from "@/components/services/terms-fields";
+import type { ServiceTerms } from "@/lib/services/terms";
 
 import Link from "next/link";
 import { updateProposalRevisionAction } from "@/app/actions/proposals";
@@ -36,6 +38,7 @@ export function ProposalRevisionForm({
     payment_terms: PaymentTerms;
     proposal_terms: string;
     proposal_terms_json?: unknown;
+    service_terms?: ServiceTerms | null;
     validity_days: number;
     billing_method: string | null;
   };
@@ -84,6 +87,7 @@ export function ProposalRevisionForm({
         initialMaterialLines={materialLines}
       />
 
+      <ServiceTermsFields initial={revision.service_terms} />
       <ProposalAlternatesFields initialAlternates={alternates} />
 
       <ProposalTermsEditorField

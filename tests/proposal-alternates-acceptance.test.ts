@@ -140,7 +140,7 @@ describe("immutable accepted proposal package", () => {
     expect(editor).toContain("ProposalContentEditor");
     expect(editor).toContain("alternate_description_json_");
     expect(action).toContain("description_json: description ? descriptionJson : null");
-    expect(action).toContain('rpc("update_proposal_revision_draft_v9"');
+    expect(action).toContain('rpc("update_proposal_revision_draft_v10"');
     expect(document).toContain("contentJson={alternate.description_json}");
     expect(acceptance).toContain("contentJson={alternate.description_json}");
     expect(preview).toContain("contentJson={alternate.description_json}");

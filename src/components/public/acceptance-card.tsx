@@ -5,6 +5,8 @@ import {
   calculateAlternateSelection,
   type ProposalAlternate,
 } from "@/lib/proposal-alternates";
+import { ServiceTermsSummary } from "@/components/services/terms-summary";
+import { monthlyTotal, type ServiceTerms } from "@/lib/services/terms";
 import { money } from "@/lib/ui/format";
 import { ProposalRichContent } from "@/components/public/proposal-rich-content";
 
@@ -25,6 +27,7 @@ type Props = {
   alternates?: ProposalAlternate[];
   baseTotal?: number | string;
   requireEmail?: boolean;
+  serviceTerms?: ServiceTerms | null;
 };
 
 function formatAcceptedAt(value: string) {
@@ -60,6 +63,7 @@ export function AcceptanceCard({
   alternates = [],
   baseTotal = 0,
   requireEmail = false,
+  serviceTerms = null,
 }: Props) {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -124,6 +128,7 @@ export function AcceptanceCard({
       signerEmail: String(formData.get("signerEmail") ?? ""),
       signerMobile: String(formData.get("signerMobile") ?? ""),
       selectedAlternateKeys: selection.selectedKeys,
+      recurringAccepted: formData.get("recurringAccepted") === "on",
       signatureType: "typed",
       acceptanceStatement: "I accept and authorize this document.",
     };
@@ -171,7 +176,7 @@ export function AcceptanceCard({
           <div><dt>Approval date</dt><dd><time dateTime={receipt.acceptedAt}>{formatAcceptedAt(receipt.acceptedAt)}</time></dd></div>
           <div><dt>Status</dt><dd><strong>Accepted</strong></dd></div>
           {receipt.acceptanceVersionId ? <div><dt>Acceptance ID</dt><dd>{receipt.acceptanceVersionId}</dd></div> : null}
-          {receipt.acceptedTotal !== undefined ? <div><dt>Accepted total</dt><dd><strong>{money(receipt.acceptedTotal)}</strong></dd></div> : null}
+          {receipt.acceptedTotal !== undefined ? <div><dt>{serviceTerms ? "Accepted one-time total" : "Accepted total"}</dt><dd><strong>{money(receipt.acceptedTotal)}</strong></dd></div> : null}
         </dl>
         {receipt.deliveryWarning ? (
           <p className="public-delivery-warning">{receipt.deliveryWarning}</p>
@@ -261,11 +266,13 @@ export function AcceptanceCard({
         <dl className="public-contract-total">
           <div><dt>Base contract</dt><dd>{money(baseTotal)}</dd></div>
           <div><dt>Selected alternates</dt><dd>{money(selection.alternateTotal)}</dd></div>
-          <div><dt>Total accepted contract</dt><dd>{money(selection.acceptedTotal)}</dd></div>
+          <div><dt>{serviceTerms ? "One-time accepted charges" : "Total accepted contract"}</dt><dd>{money(selection.acceptedTotal)}</dd></div>
         </dl>
       </section>
 
+      <ServiceTermsSummary terms={serviceTerms} />
       <fieldset disabled={pending}>
+        {serviceTerms && <label className="accept-check"><input name="recurringAccepted" type="checkbox" required/>I also accept {money(monthlyTotal(serviceTerms))} per month for {serviceTerms.termMonths} months, in addition to the one-time charges, with the recurring scope and conditions shown above.</label>}
         <legend>Electronic Signature</legend>
         <label>Name<input name="signerName" required /></label>
         <label>Title<input name="signerTitle" /></label>

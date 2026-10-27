@@ -17,6 +17,7 @@ export type PublicAcceptanceInput = {
   signerEmail: string | null;
   signerMobile: string | null;
   selectedAlternateKeys: string[];
+  recurringAccepted?: boolean;
   signatureType: "typed";
   acceptanceStatement: string;
 };
@@ -141,6 +142,7 @@ export async function readPublicAcceptance(request: Request): Promise<PublicAcce
     signerEmail,
     signerMobile,
     selectedAlternateKeys,
+    recurringAccepted: record.recurringAccepted === true,
     signatureType: "typed",
     acceptanceStatement: "I accept and authorize this document.",
   };

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase-admin";
 import { markPastDueInvoices } from "@/lib/invoices/service";
 
 export const dynamic = "force-dynamic";
@@ -21,11 +22,13 @@ async function runMaintenance(request: NextRequest) {
 
   try {
     const updated = await markPastDueInvoices();
+    const { data: serviceInvoices, error } = await createAdminClient().rpc("generate_service_invoices");
+    if (error) throw error;
     const checkedAt = new Date().toISOString();
     console.info("[scheduled-maintenance] completed", { updated, checkedAt });
 
     return NextResponse.json(
-      { ok: true, updated, checkedAt },
+      { ok: true, updated, serviceInvoices, checkedAt },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
   } catch (error) {

@@ -17,7 +17,7 @@ function esc(value: unknown) {
 async function loadInvoiceDocument(invoiceId: string, dueDate?: string) {
   const admin = createAdminClient();
   const [{ data: invoice, error }, { data: items, error: itemsError }, { data: company, error: companyError }] = await Promise.all([
-    admin.from("invoices").select("*,client:clients(*),project:projects(*)").eq("id", invoiceId).single(),
+    admin.from("invoices").select("*,client:clients(*),contact:contacts(first_name,last_name,email),project:projects(*)").eq("id", invoiceId).single(),
     admin.from("invoice_items").select("*").eq("invoice_id", invoiceId).order("sort_order"),
     admin.from("company_settings").select("*").limit(1).single(),
   ]);
@@ -51,6 +51,11 @@ export async function buildInvoiceHtml(invoiceId: string, options?: { dueDate?: 
   const appendix = invoice.include_receipt_appendix
     ? await buildReceiptAppendixHtml(invoiceId)
     : "";
+  const billingContact = Array.isArray(invoice.contact) ? invoice.contact[0] : invoice.contact;
+  const contactName = [billingContact?.first_name, billingContact?.last_name].filter(Boolean).join(" ");
+  const projectLine = invoice.project
+    ? `<strong>Project:</strong> ${esc(invoice.project.project_number)} — ${esc(invoice.project.project_name)}<br>`
+    : `<strong>Billing:</strong> Direct client invoice<br>`;
 
   const html = `<!doctype html><html><head><meta charset="utf-8"><style>
     @page{size:Letter;margin:.55in}
@@ -68,8 +73,8 @@ export async function buildInvoiceHtml(invoiceId: string, options?: { dueDate?: 
     <header><img src="${hasaLogoDataUri}" alt="HASA Concepts">
       <div class="invoice-title"><h1>INVOICE</h1><strong>${esc(invoice.invoice_number)}</strong></div>
     </header>
-    <p><strong>Bill To:</strong><br>${esc(invoice.client?.company_name)}</p>
-    <p><strong>Project:</strong> ${esc(invoice.project?.project_number)} — ${esc(invoice.project?.project_name)}<br>
+    <p><strong>Bill To:</strong><br>${esc(invoice.client?.company_name)}${contactName ? `<br>${esc(contactName)}` : ""}</p>
+    <p>${projectLine}
       <strong>Invoice Date:</strong> ${esc(invoice.invoice_date)}<br>
       <strong>Due Date:</strong> ${esc(invoiceDueDateLabel(invoice))}<br>
       <strong>Terms:</strong> ${esc(invoice.payment_terms)}</p>
@@ -97,7 +102,9 @@ export async function renderInvoicePdf(invoiceId: string, options?: { dueDate?: 
 
 export async function generateInvoicePdf(invoiceId: string, options?: { dueDate?: string }) {
   const { admin, bytes, sha256, invoice } = await renderInvoicePdf(invoiceId, options);
-  const path = `clients/${invoice.client_id}/projects/${invoice.project_id}/invoices/${invoice.invoice_number}.pdf`;
+  const path = invoice.project_id
+    ? `clients/${invoice.client_id}/projects/${invoice.project_id}/invoices/${invoice.invoice_number}.pdf`
+    : `clients/${invoice.client_id}/direct-invoices/${invoice.invoice_number}.pdf`;
   const { error: uploadError } = await admin.storage
     .from(process.env.DOCUMENTS_BUCKET ?? "hasa-documents")
     .upload(path, bytes, { contentType: "application/pdf", upsert: true });

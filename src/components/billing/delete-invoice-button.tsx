@@ -11,7 +11,7 @@ export function DeleteInvoiceButton({
 }: {
   invoiceId: string;
   invoiceNumber: string;
-  projectId: string;
+  projectId: string | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -25,7 +25,9 @@ export function DeleteInvoiceButton({
         disabled={pending}
         onClick={() => {
           const confirmed = window.confirm(
-            `Delete draft Invoice ${invoiceNumber}? Linked draft time and expenses will return to the project, and this latest invoice number will be released for reuse. This cannot be undone.`,
+            projectId
+              ? `Delete draft Invoice ${invoiceNumber}? Linked draft time and expenses will return to the project, and this latest invoice number will be released for reuse. This cannot be undone.`
+              : `Delete direct draft Invoice ${invoiceNumber}? Its line items will be deleted and this latest invoice number will be released for reuse. This cannot be undone.`,
           );
           if (!confirmed) return;
 
@@ -33,7 +35,7 @@ export function DeleteInvoiceButton({
             try {
               setError("");
               await deleteUnissuedDraftInvoiceAction(invoiceId);
-              router.replace(`/projects/${projectId}`);
+              router.replace(projectId ? `/projects/${projectId}` : "/billing");
               router.refresh();
             } catch (caught) {
               setError(caught instanceof Error ? caught.message : "Unable to delete the invoice.");

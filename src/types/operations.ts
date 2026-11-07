@@ -5,7 +5,8 @@ export type InvoiceType =
   | "hourly"
   | "expense"
   | "final"
-  | "credit";
+  | "credit"
+  | "standalone";
 
 export type InvoiceStatus =
   | "draft"

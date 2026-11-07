@@ -216,38 +216,67 @@ export async function getInvoiceDetail(invoiceId: string) {
 
   const [{ data: invoice, error }, { data: items }, { data: payments }, { data: deliveries }] =
     await Promise.all([
-      s.from("invoices").select("*, client:clients(*), project:projects(*, primary_contact:contacts(id,first_name,last_name,email,mobile_phone))").eq("id", invoiceId).single(),
+      s.from("invoices").select("*, client:clients(*), contact:contacts(id,first_name,last_name,email,mobile_phone), project:projects(*, primary_contact:contacts(id,first_name,last_name,email,mobile_phone))").eq("id", invoiceId).single(),
       s.from("invoice_items").select("*").eq("invoice_id", invoiceId).order("sort_order"),
       s.from("payments").select("*").eq("invoice_id", invoiceId).order("payment_date", { ascending: false }),
       s.from("document_deliveries").select("*").eq("document_type", "invoice").eq("related_record_id", invoiceId).order("created_at", { ascending: false }),
     ]);
 
   if (error) throw error;
-  const [
-    { data: latestProjectInvoice, error: latestInvoiceError },
-    { data: billingContext, error: billingContextError },
-    { data: priorInvoices, error: priorInvoicesError },
-  ] = await Promise.all([
-    s.from("invoices")
+  let latestInvoiceNumber: string | null = null;
+  let billingContext = {
+    authorized_fee: 0,
+    service_fee_authorized: 0,
+    billing_method: "direct",
+  };
+  let priorInvoices: Array<{
+    id: string;
+    invoice_number: string;
+    invoice_date: string;
+    invoice_type: string;
+    status: string;
+    total: number;
+    amount_paid: number;
+    balance_due: number;
+  }> = [];
+
+  if (invoice.project_id) {
+    const [latestResult, contextResult, priorResult] = await Promise.all([
+      s.from("invoices")
+        .select("invoice_number")
+        .eq("project_id", invoice.project_id)
+        .order("invoice_number", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      s.from("project_invoice_context")
+        .select("authorized_fee,service_fee_authorized,billing_method")
+        .eq("id", invoice.project_id)
+        .single(),
+      s.from("invoices")
+        .select("id,invoice_number,invoice_date,invoice_type,status,total,amount_paid,balance_due")
+        .eq("project_id", invoice.project_id)
+        .neq("id", invoiceId)
+        .neq("status", "void")
+        .order("invoice_number"),
+    ]);
+    if (latestResult.error) throw latestResult.error;
+    if (contextResult.error) throw contextResult.error;
+    if (priorResult.error) throw priorResult.error;
+    latestInvoiceNumber = latestResult.data?.invoice_number ?? null;
+    billingContext = contextResult.data;
+    priorInvoices = priorResult.data ?? [];
+  } else {
+    const invoiceYear = String(invoice.invoice_date).slice(0, 4);
+    const { data: latestDirectInvoice, error: latestInvoiceError } = await s.from("invoices")
       .select("invoice_number")
-      .eq("project_id", invoice.project_id)
+      .is("project_id", null)
+      .like("invoice_number", `${invoiceYear}-DIRECT-%`)
       .order("invoice_number", { ascending: false })
       .limit(1)
-      .maybeSingle(),
-    s.from("project_invoice_context")
-      .select("authorized_fee,service_fee_authorized,billing_method")
-      .eq("id", invoice.project_id)
-      .single(),
-    s.from("invoices")
-      .select("id,invoice_number,invoice_date,invoice_type,status,total,amount_paid,balance_due")
-      .eq("project_id", invoice.project_id)
-      .neq("id", invoiceId)
-      .neq("status", "void")
-      .order("invoice_number"),
-  ]);
-  if (latestInvoiceError) throw latestInvoiceError;
-  if (billingContextError) throw billingContextError;
-  if (priorInvoicesError) throw priorInvoicesError;
+      .maybeSingle();
+    if (latestInvoiceError) throw latestInvoiceError;
+    latestInvoiceNumber = latestDirectInvoice?.invoice_number ?? null;
+  }
 
   const priorInvoiceIds = (priorInvoices ?? []).map((priorInvoice) => priorInvoice.id);
   const { data: priorItems, error: priorItemsError } = priorInvoiceIds.length
@@ -265,7 +294,7 @@ export async function getInvoiceDetail(invoiceId: string) {
 
   return {
     invoice,
-    latestProjectInvoiceNumber: latestProjectInvoice?.invoice_number ?? null,
+    latestProjectInvoiceNumber: latestInvoiceNumber,
     items: items ?? [],
     payments: payments ?? [],
     deliveries: deliveries ?? [],

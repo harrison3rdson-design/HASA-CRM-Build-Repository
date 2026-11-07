@@ -27,8 +27,8 @@ export default async function Page() {
               <tr key={invoice.id}>
                 <td><Link href={`/billing/${invoice.id}`}>{invoice.invoice_number}</Link></td>
                 <td>{invoice.client?.company_name ?? "—"}</td>
-                <td>{invoice.project?.project_number ?? "—"}</td>
-                <td>{invoice.invoice_type}</td>
+                <td>{invoice.project?.project_number ?? "Direct"}</td>
+                <td>{invoice.invoice_type === "standalone" ? "direct" : invoice.invoice_type}</td>
                 <td>{money(invoice.total)}</td>
                 <td>{money(invoice.balance_due)}</td>
                 <td><span className="pill">{invoice.status}</span></td>

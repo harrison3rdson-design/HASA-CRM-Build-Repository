@@ -4,6 +4,8 @@ import { InvoiceSummary } from "@/components/billing/invoice-summary";
 import { DeleteInvoiceButton } from "@/components/billing/delete-invoice-button";
 import { SendAndLockInvoiceForm } from "@/components/billing/send-and-lock-invoice-form";
 import { PaymentForm } from "@/components/forms/payment-form";
+import { DirectInvoiceItemForm } from "@/components/forms/direct-invoice-item-form";
+import { deleteInvoiceItemAction } from "@/app/actions/invoices";
 import { getInvoiceDetail } from "@/lib/data/detail-data";
 import { isTransactionalEmailConfigured } from "@/lib/messaging/email";
 import { isTwilioConfigured } from "@/lib/messaging/twilio";
@@ -17,7 +19,12 @@ export default async function InvoiceDetailPage({
 }) {
   const { invoiceId } = await params;
   const d = await getInvoiceDetail(invoiceId);
-  const primaryContact = normalizeRelatedContact(d.invoice.project?.primary_contact);
+  const primaryContact = normalizeRelatedContact(
+    d.invoice.contact ?? d.invoice.project?.primary_contact,
+  );
+  const isEditableDirectInvoice = d.invoice.invoice_type === "standalone"
+    && d.invoice.status === "draft"
+    && !d.invoice.locked;
   const canSendInvoice = !d.invoice.sent_at
     && (d.invoice.status === "draft" || d.invoice.status === "issued");
   const canDeleteDraft = !d.invoice.service_agreement_id && d.invoice.status === "draft"
@@ -30,7 +37,7 @@ export default async function InvoiceDetailPage({
   return (
     <>
       <div className="page-heading">
-        <div><h1>Invoice {d.invoice.invoice_number}</h1><p>{d.invoice.client?.company_name} · {d.invoice.project?.project_name}</p></div>
+        <div><h1>Invoice {d.invoice.invoice_number}</h1><p>{d.invoice.client?.company_name} · {d.invoice.project?.project_name ?? "Direct client invoice"}</p></div>
         <div className="button-row">
           <Link
             className="secondary-button"
@@ -65,10 +72,14 @@ export default async function InvoiceDetailPage({
       ) : null}
 
       <Panel title="Line Items">
-        {d.items.length ? <div className="table-wrap"><table><thead><tr><th>Description</th><th>Type</th><th>Quantity</th><th>Rate</th><th>Amount</th></tr></thead>
-        <tbody>{d.items.map((i:any)=><tr key={i.id}><td>{i.description}</td><td>{String(i.item_type).replaceAll("_"," ")}</td><td>{i.quantity} {i.unit??"item"}</td><td>{money(i.rate)}</td><td>{money(i.amount)}</td></tr>)}</tbody></table></div>
-        : <p className="muted">No unbilled time, per-unit work, or expenses were available. This draft has no line items yet.</p>}
+        {d.items.length ? <div className="table-wrap"><table><thead><tr><th>Description</th><th>Type</th><th>Quantity</th><th>Rate</th><th>Amount</th>{isEditableDirectInvoice ? <th>Actions</th> : null}</tr></thead>
+        <tbody>{d.items.map((i:any)=><tr key={i.id}><td>{i.description}</td><td>{String(i.item_type).replaceAll("_"," ")}</td><td>{i.quantity} {i.unit??"item"}</td><td>{money(i.rate)}</td><td>{money(i.amount)}</td>{isEditableDirectInvoice ? <td><form action={deleteInvoiceItemAction}><input type="hidden" name="invoice_id" value={invoiceId} /><input type="hidden" name="item_id" value={i.id} /><button className="secondary-button danger-button" type="submit">Remove</button></form></td> : null}</tr>)}</tbody></table></div>
+        : <p className="muted">{isEditableDirectInvoice ? "Add at least one line item before sending this invoice." : "No unbilled time, per-unit work, or expenses were available. This draft has no line items yet."}</p>}
       </Panel>
+
+      {isEditableDirectInvoice ? <Panel title="Add Line Item">
+        <DirectInvoiceItemForm invoiceId={invoiceId} />
+      </Panel> : null}
 
       <div className="two-column">
         <Panel title="Record Payment">

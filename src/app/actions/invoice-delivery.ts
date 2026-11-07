@@ -51,8 +51,9 @@ export async function generateAndSendInvoiceAction(input:{
   const admin=createAdminClient();
 
   const {data:invoice,error}=await admin.from("invoices").select(`
-    invoice_number,project_id,client_id,payment_terms,status,locked,issued_at,sent_at,
+    invoice_number,project_id,client_id,contact_id,payment_terms,total,status,locked,issued_at,sent_at,
     client:clients(company_name),
+    contact:contacts(id,first_name,last_name,email,mobile_phone,is_primary),
     project:projects(id,client_id,primary_contact_id,primary_contact:contacts(id,first_name,last_name,email,mobile_phone,is_primary))
   `).eq("id",input.invoiceId).single();
   if(error) throw error;
@@ -62,35 +63,37 @@ export async function generateAndSendInvoiceAction(input:{
   }
 
   const project = Array.isArray(invoice.project) ? invoice.project[0] : invoice.project;
-  let contact = normalizeRelatedContact(project?.primary_contact);
-  if (!contact && project?.client_id) {
+  let contact = normalizeRelatedContact(invoice.contact) ?? normalizeRelatedContact(project?.primary_contact);
+  if (!contact && invoice.client_id) {
     const { data: contacts, error: contactsError } = await admin
       .from("contacts")
       .select("id,first_name,last_name,email,mobile_phone,is_primary")
-      .eq("client_id", project.client_id)
+      .eq("client_id", invoice.client_id)
       .order("is_primary", { ascending: false })
       .order("created_at", { ascending: true });
     if (contactsError) throw contactsError;
     contact = selectDefaultProposalContact(contacts ?? []);
 
     if (contact) {
-      const { error: assignError } = await admin
-        .from("projects")
-        .update({ primary_contact_id: contact.id })
-        .eq("id", invoice.project_id)
-        .is("primary_contact_id", null);
+      const assignQuery = project
+        ? admin.from("projects").update({ primary_contact_id: contact.id }).eq("id", project.id).is("primary_contact_id", null)
+        : admin.from("invoices").update({ contact_id: contact.id }).eq("id", input.invoiceId).is("contact_id", null);
+      const { error: assignError } = await assignQuery;
       if (assignError) throw assignError;
     }
   }
 
   if (!contact?.email && !contact?.mobile_phone) {
-    return { ok: false, error: "Assign a project contact with an email address or mobile number before sending." };
+    return { ok: false, error: "Assign a billing contact with an email address or mobile number before sending." };
   }
   if ((input.method === "email" || input.method === "both") && !contact.email) {
-    return { ok: false, error: "The project contact does not have an email address." };
+    return { ok: false, error: "The billing contact does not have an email address." };
   }
   if ((input.method === "sms" || input.method === "both") && !contact.mobile_phone) {
-    return { ok: false, error: "The project contact does not have a mobile number." };
+    return { ok: false, error: "The billing contact does not have a mobile number." };
+  }
+  if (Number(invoice.total) <= 0) {
+    return { ok: false, error: "Add invoice line items with a total greater than zero before sending." };
   }
 
   const providerError = requestedProviderError(input.method);
@@ -178,7 +181,7 @@ export async function generateAndSendInvoiceAction(input:{
   if (!sentInvoice) throw new Error("The invoice changed while it was being sent. Review its status before trying again.");
   revalidatePath("/billing");
   revalidatePath(`/billing/${input.invoiceId}`);
-  revalidatePath(`/projects/${invoice.project_id}`);
+  if (invoice.project_id) revalidatePath(`/projects/${invoice.project_id}`);
   logInvoiceDelivery("info", "Invoice delivered and locked", input.invoiceId, input.method);
   return { ok: true, results };
 }

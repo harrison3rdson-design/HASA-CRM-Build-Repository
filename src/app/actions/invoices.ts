@@ -12,9 +12,18 @@ export async function createInvoiceAction(formData: FormData) {
   await Policies.invoiceCreate();
   const admin = createAdminClient();
 
-  const projectId = requiredText(formData.get("project_id"), "Project");
-  const invoiceType = requiredText(formData.get("invoice_type"), "Invoice type");
-  if (!["advance", "progress", "final"].includes(invoiceType)) {
+  const invoiceMode = requiredText(formData.get("invoice_mode"), "Invoice source");
+  if (!["project", "standalone"].includes(invoiceMode)) {
+    throw new Error("Choose an approved project or a direct client invoice.");
+  }
+  const invoiceDate = requiredText(formData.get("invoice_date"), "Invoice date");
+  const projectId = invoiceMode === "project"
+    ? requiredText(formData.get("project_id"), "Project")
+    : null;
+  const invoiceType = invoiceMode === "standalone"
+    ? "standalone"
+    : requiredText(formData.get("invoice_type"), "Invoice type");
+  if (invoiceMode === "project" && !["advance", "progress", "final"].includes(invoiceType)) {
     throw new Error("Invoice type must be Advance, Progress, or Final.");
   }
 
@@ -38,24 +47,42 @@ export async function createInvoiceAction(formData: FormData) {
     throw new Error("Choose unbilled time, per-unit work, expenses and materials, or a combination.");
   }
 
-  const { data: project, error: projectError } = await admin
-    .from("projects")
-    .select("client_id,source_revision_id,project_number")
-    .eq("id", projectId)
-    .single();
-
-  if (projectError) throw projectError;
-  if (project.project_number.startsWith("SVC-")) throw new Error("Create recurring invoices from the service agreement.");
-
+  let clientId: string;
+  let contactId: string | null = null;
   let inheritedPaymentTerms: string | null = null;
-  if (project.source_revision_id) {
-    const { data: revision, error: revisionError } = await admin
-      .from("proposal_revisions")
-      .select("payment_terms")
-      .eq("id", project.source_revision_id)
+
+  if (projectId) {
+    const { data: project, error: projectError } = await admin
+      .from("projects")
+      .select("client_id,source_revision_id,primary_contact_id,project_number")
+      .eq("id", projectId)
       .single();
-    if (revisionError) throw revisionError;
-    inheritedPaymentTerms = revision.payment_terms;
+    if (projectError) throw projectError;
+    if (project.project_number.startsWith("SVC-")) {
+      throw new Error("Create recurring invoices from the service agreement.");
+    }
+    clientId = project.client_id;
+    contactId = project.primary_contact_id;
+
+    if (project.source_revision_id) {
+      const { data: revision, error: revisionError } = await admin
+        .from("proposal_revisions")
+        .select("payment_terms")
+        .eq("id", project.source_revision_id)
+        .single();
+      if (revisionError) throw revisionError;
+      inheritedPaymentTerms = revision.payment_terms;
+    }
+  } else {
+    clientId = requiredText(formData.get("client_id"), "Client");
+    contactId = requiredText(formData.get("contact_id"), "Billing contact");
+
+    const [{ data: client, error: clientError }, { data: contact, error: contactError }] = await Promise.all([
+      admin.from("clients").select("id").eq("id", clientId).eq("active", true).single(),
+      admin.from("contacts").select("id,client_id").eq("id", contactId).eq("client_id", clientId).single(),
+    ]);
+    if (clientError || !client) throw new Error("Choose an active customer.");
+    if (contactError || !contact) throw new Error("Choose a billing contact for that customer.");
   }
 
   if (!inheritedPaymentTerms) {
@@ -68,9 +95,10 @@ export async function createInvoiceAction(formData: FormData) {
     inheritedPaymentTerms = settings.default_payment_terms;
   }
 
-  const { data: invoiceNumber, error: numberError } = await admin.rpc("next_invoice_number", {
-    p_project_id: projectId,
-  });
+  const numberResult = projectId
+    ? await admin.rpc("next_invoice_number", { p_project_id: projectId })
+    : await admin.rpc("next_standalone_invoice_number", { p_invoice_date: invoiceDate });
+  const { data: invoiceNumber, error: numberError } = numberResult;
   if (numberError) throw numberError;
 
   const { data, error } = await admin
@@ -78,9 +106,10 @@ export async function createInvoiceAction(formData: FormData) {
     .insert({
       invoice_number: invoiceNumber,
       project_id: projectId,
-      client_id: project.client_id,
+      client_id: clientId,
+      contact_id: contactId,
       invoice_type: invoiceType,
-      invoice_date: requiredText(formData.get("invoice_date"), "Invoice date"),
+      invoice_date: invoiceDate,
       due_date: null,
       payment_terms: parsePaymentTerms(optionalText(formData.get("payment_terms")) ?? inheritedPaymentTerms),
       customer_notes: optionalText(formData.get("customer_notes")),
@@ -94,21 +123,23 @@ export async function createInvoiceAction(formData: FormData) {
 
   if (error) throw error;
 
-  const { error: buildError } = await admin.rpc("build_invoice_workflow_v2", {
-    p_invoice_id: data.id,
-    p_include_time: includeTime,
-    p_include_expenses: includeExpenses,
-    p_include_unit_work: includeUnitWork,
-    p_advance_method: advanceMethod,
-    p_advance_value: advanceValue,
-  });
-  if (buildError) {
-    await admin.from("invoices").delete().eq("id", data.id).eq("status", "draft");
-    throw buildError;
+  if (projectId) {
+    const { error: buildError } = await admin.rpc("build_invoice_workflow_v2", {
+      p_invoice_id: data.id,
+      p_include_time: includeTime,
+      p_include_expenses: includeExpenses,
+      p_include_unit_work: includeUnitWork,
+      p_advance_method: advanceMethod,
+      p_advance_value: advanceValue,
+    });
+    if (buildError) {
+      await admin.from("invoices").delete().eq("id", data.id).eq("status", "draft");
+      throw buildError;
+    }
   }
 
   revalidatePath("/billing");
-  revalidatePath(`/projects/${projectId}`);
+  if (projectId) revalidatePath(`/projects/${projectId}`);
   redirect(`/billing/${data.id}`);
 }
 
@@ -118,14 +149,26 @@ export async function addInvoiceItemAction(formData: FormData) {
 
   const invoiceId = requiredText(formData.get("invoice_id"), "Invoice");
   const itemType = requiredText(formData.get("item_type"), "Item type");
-  const enteredQuantity = numberValue(formData.get("quantity"), "Quantity", { min: 0 });
+  if (!["professional_fee", "expense", "adjustment", "credit"].includes(itemType)) {
+    throw new Error("Choose a supported direct-invoice line type.");
+  }
+  const { data: invoice, error: invoiceError } = await admin
+    .from("invoices")
+    .select("status,locked,invoice_type")
+    .eq("id", invoiceId)
+    .single();
+  if (invoiceError) throw invoiceError;
+  if (invoice.invoice_type !== "standalone" || invoice.status !== "draft" || invoice.locked) {
+    throw new Error("Line items can only be changed on an unlocked direct-invoice draft.");
+  }
+
+  const enteredQuantity = numberValue(formData.get("quantity"), "Quantity", { min: 0.001 });
   const quantity = ["hourly", "travel_time"].includes(itemType)
     ? roundHoursUp(enteredQuantity)
     : enteredQuantity;
   const rate = numberValue(formData.get("rate"), "Rate");
-  const amount = ["hourly", "travel_time"].includes(itemType)
-    ? quantity * rate
-    : Number(formData.get("amount") ?? quantity * rate);
+  const calculatedAmount = quantity * Math.abs(rate);
+  const amount = itemType === "credit" ? -calculatedAmount : calculatedAmount;
 
   const { error } = await admin.from("invoice_items").insert({
     invoice_id: invoiceId,
@@ -141,6 +184,35 @@ export async function addInvoiceItemAction(formData: FormData) {
 
   await admin.rpc("recalculate_invoice", { p_invoice_id: invoiceId });
   revalidatePath("/billing");
+  revalidatePath(`/billing/${invoiceId}`);
+}
+
+export async function deleteInvoiceItemAction(formData: FormData) {
+  await Policies.invoiceCreate();
+  const admin = createAdminClient();
+  const invoiceId = requiredText(formData.get("invoice_id"), "Invoice");
+  const itemId = requiredText(formData.get("item_id"), "Line item");
+
+  const { data: invoice, error: invoiceError } = await admin
+    .from("invoices")
+    .select("status,locked,invoice_type")
+    .eq("id", invoiceId)
+    .single();
+  if (invoiceError) throw invoiceError;
+  if (invoice.invoice_type !== "standalone" || invoice.status !== "draft" || invoice.locked) {
+    throw new Error("Line items can only be changed on an unlocked direct-invoice draft.");
+  }
+
+  const { error } = await admin
+    .from("invoice_items")
+    .delete()
+    .eq("id", itemId)
+    .eq("invoice_id", invoiceId);
+  if (error) throw error;
+
+  await admin.rpc("recalculate_invoice", { p_invoice_id: invoiceId });
+  revalidatePath("/billing");
+  revalidatePath(`/billing/${invoiceId}`);
 }
 
 export async function issueInvoiceAction(invoiceId: string) {
@@ -199,13 +271,13 @@ export async function deleteUnissuedDraftInvoiceAction(invoiceId: string) {
   } | null;
   if (
     typeof deleted?.invoice_number !== "string"
-    || typeof deleted?.project_id !== "string"
+    || (deleted?.project_id !== null && typeof deleted?.project_id !== "string")
   ) {
     throw new Error("The invoice could not be deleted.");
   }
 
   revalidatePath("/billing");
-  revalidatePath(`/projects/${deleted.project_id}`);
+  if (typeof deleted.project_id === "string") revalidatePath(`/projects/${deleted.project_id}`);
   console.log(JSON.stringify({
     level: "info",
     message: "Draft invoice deletion completed",
@@ -214,6 +286,6 @@ export async function deleteUnissuedDraftInvoiceAction(invoiceId: string) {
   }));
   return {
     invoiceNumber: deleted.invoice_number,
-    projectId: deleted.project_id,
+    projectId: typeof deleted.project_id === "string" ? deleted.project_id : null,
   };
 }

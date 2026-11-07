@@ -74,7 +74,7 @@ export function SendAndLockInvoiceForm({
         </button>
       </div>
       {!hasEmail && !hasMobile ? (
-        <p className="form-error">Add an email address or mobile number to the project contact before sending.</p>
+        <p className="form-error">Add an email address or mobile number to the billing contact before sending.</p>
       ) : null}
       {hasMobile && !smsConfigured ? <p className="form-error">Text messaging is not configured for this app.</p> : null}
       {hasEmail && !emailConfigured ? <p className="form-error">Email delivery is not configured for this app.</p> : null}

@@ -27,6 +27,8 @@ export default async function InvoiceDetailPage({
     && !d.invoice.locked;
   const canSendInvoice = !d.invoice.sent_at
     && (d.invoice.status === "draft" || d.invoice.status === "issued");
+  const canResendInvoice = Boolean(d.invoice.sent_at)
+    && ["sent", "viewed", "partial", "paid", "past_due"].includes(d.invoice.status);
   const canDeleteDraft = !d.invoice.service_agreement_id && d.invoice.status === "draft"
     && !d.invoice.locked
     && !d.invoice.issued_at
@@ -59,14 +61,15 @@ export default async function InvoiceDetailPage({
 
       <InvoiceSummary invoice={d.invoice} />
 
-      {canSendInvoice ? (
-        <Panel title="Send Invoice">
+      {canSendInvoice || canResendInvoice ? (
+        <Panel title={canResendInvoice ? "Resend Invoice" : "Send Invoice"}>
           <SendAndLockInvoiceForm
             invoiceId={invoiceId}
             hasEmail={Boolean(primaryContact?.email)}
             hasMobile={Boolean(primaryContact?.mobile_phone)}
             emailConfigured={isTransactionalEmailConfigured()}
             smsConfigured={isTwilioConfigured()}
+            mode={canResendInvoice ? "resend" : "send"}
           />
         </Panel>
       ) : null}

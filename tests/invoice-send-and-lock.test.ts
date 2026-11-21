@@ -25,10 +25,20 @@ describe("invoice send and lock workflow", () => {
   });
 
   it("supports drafts and the existing issued-but-unsent recovery state", () => {
-    expect(action).toContain('invoice.status !== "draft" && invoice.status !== "issued"');
+    expect(action).toContain("const isInitialSend = !invoice.sent_at");
+    expect(action).toContain('invoice.status === "draft" || invoice.status === "issued"');
     expect(sourcePage).toContain('d.invoice.status === "draft" || d.invoice.status === "issued"');
     expect(action).toContain('if (invoice.status === "draft")');
     expect(action).toContain('admin.rpc("issue_invoice"');
+  });
+
+  it("supports resending a locked invoice without restarting its due date", () => {
+    expect(sourcePage).toContain("canResendInvoice");
+    expect(sourcePage).toContain('mode={canResendInvoice ? "resend" : "send"}');
+    expect(component).toContain("fresh customer link valid for 120 days");
+    expect(component).toContain("The locked invoice and its existing due date do not change");
+    expect(action).toContain("RESENDABLE_INVOICE_STATUSES");
+    expect(action).toContain("Invoice resent with a fresh 120-day link");
   });
 
   it("locks and starts the due date only after provider delivery succeeds", () => {

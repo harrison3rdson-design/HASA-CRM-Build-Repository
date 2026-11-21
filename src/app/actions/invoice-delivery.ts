@@ -5,10 +5,15 @@ import { Policies } from "@/lib/auth/action-policy";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { generateInvoicePdf } from "@/lib/invoices/render";
 import { deliverPublicLink } from "@/lib/delivery/send-document";
-import { createSignedDocumentUrl } from "@/lib/storage/private-storage";
 import { calculateInvoiceDueDate } from "@/lib/invoices/due-date";
 import { isTransactionalEmailConfigured } from "@/lib/messaging/email";
 import { isTwilioConfigured } from "@/lib/messaging/twilio";
+import { resolveAppUrl } from "@/lib/app-url";
+import {
+  activateInvoiceShareLink,
+  createInvoiceShareLink,
+  revokeInvoiceShareLink,
+} from "@/lib/public/invoice";
 import {
   normalizeRelatedContact,
   selectDefaultProposalContact,
@@ -19,6 +24,14 @@ type DeliveryMethod = "sms" | "email" | "both";
 type SendInvoiceResult =
   | { ok: true; results: Awaited<ReturnType<typeof deliverPublicLink>> }
   | { ok: false; error: string };
+
+const RESENDABLE_INVOICE_STATUSES = new Set([
+  "sent",
+  "viewed",
+  "partial",
+  "paid",
+  "past_due",
+]);
 
 function requestedProviderError(method: DeliveryMethod): string | null {
   const errors: string[] = [];
@@ -43,6 +56,39 @@ function logInvoiceDelivery(level: "info" | "error", message: string, invoiceId:
   else console.log(entry);
 }
 
+async function cleanUpFailedInvoiceDelivery(input: {
+  admin: ReturnType<typeof createAdminClient>;
+  invoiceId: string;
+  method: string;
+  tokenHash: string | null;
+  generatedDocumentId: string | null;
+}) {
+  const failures: string[] = [];
+  if (input.tokenHash) {
+    try {
+      await revokeInvoiceShareLink(input.tokenHash);
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : "Unable to revoke the new invoice link.");
+    }
+  }
+  if (input.generatedDocumentId) {
+    const { error } = await input.admin
+      .from("generated_documents")
+      .delete()
+      .eq("id", input.generatedDocumentId);
+    if (error) failures.push(error.message);
+  }
+  if (failures.length) {
+    logInvoiceDelivery(
+      "error",
+      "Invoice delivery cleanup was incomplete",
+      input.invoiceId,
+      input.method,
+      failures.join(" "),
+    );
+  }
+}
+
 export async function generateAndSendInvoiceAction(input:{
   invoiceId:string;
   method:DeliveryMethod;
@@ -51,15 +97,18 @@ export async function generateAndSendInvoiceAction(input:{
   const admin=createAdminClient();
 
   const {data:invoice,error}=await admin.from("invoices").select(`
-    invoice_number,project_id,client_id,contact_id,payment_terms,total,status,locked,issued_at,sent_at,
+    invoice_number,project_id,client_id,contact_id,payment_terms,total,status,locked,issued_at,sent_at,due_date,
     client:clients(company_name),
     contact:contacts(id,first_name,last_name,email,mobile_phone,is_primary),
     project:projects(id,client_id,primary_contact_id,primary_contact:contacts(id,first_name,last_name,email,mobile_phone,is_primary))
   `).eq("id",input.invoiceId).single();
   if(error) throw error;
-  if (invoice.sent_at || invoice.status === "sent") throw new Error("This invoice has already been sent.");
-  if (invoice.status !== "draft" && invoice.status !== "issued") {
-    throw new Error("Only a draft or previously issued unsent invoice can be sent.");
+  const isInitialSend = !invoice.sent_at
+    && (invoice.status === "draft" || invoice.status === "issued");
+  const isResend = Boolean(invoice.sent_at)
+    && RESENDABLE_INVOICE_STATUSES.has(invoice.status);
+  if (!isInitialSend && !isResend) {
+    throw new Error("Only an unsent invoice or a previously sent active invoice can be delivered.");
   }
 
   const project = Array.isArray(invoice.project) ? invoice.project[0] : invoice.project;
@@ -103,38 +152,99 @@ export async function generateAndSendInvoiceAction(input:{
   }
 
   const sentAt = new Date();
-  const dueDate = calculateInvoiceDueDate(sentAt, invoice.payment_terms);
-  let generated: Awaited<ReturnType<typeof generateInvoicePdf>>;
+  const dueDate = isResend
+    ? invoice.due_date
+    : calculateInvoiceDueDate(sentAt, invoice.payment_terms);
   let results: Awaited<ReturnType<typeof deliverPublicLink>>;
+  let tokenHash: string | null = null;
+  let generatedDocumentId: string | null = null;
   try {
-    generated=await generateInvoicePdf(input.invoiceId,{dueDate});
-    const signedUrl=await createSignedDocumentUrl(generated.path,60*60*24*7);
-    logInvoiceDelivery("info", "Invoice delivery started", input.invoiceId, input.method);
+    let documentId: string;
+    if (isResend) {
+      const { data: existingDocument, error: existingDocumentError } = await admin
+        .from("generated_documents")
+        .select("id")
+        .eq("document_type", "invoice")
+        .eq("related_record_id", input.invoiceId)
+        .eq("locked", true)
+        .order("generated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (existingDocumentError) throw existingDocumentError;
+      if (!existingDocument) {
+        throw new Error("The locked invoice PDF could not be found. Contact support before resending this invoice.");
+      }
+      documentId = existingDocument.id;
+    } else {
+      const generated = await generateInvoicePdf(input.invoiceId, { dueDate: dueDate ?? undefined });
+      const { data: generatedDocument, error: documentError } = await admin
+        .from("generated_documents")
+        .insert({
+          client_id: invoice.client_id,
+          project_id: invoice.project_id,
+          document_type: "invoice",
+          related_record_id: input.invoiceId,
+          storage_path: generated.path,
+          original_filename: `${invoice.invoice_number}.pdf`,
+          mime_type: "application/pdf",
+          sha256_hash: generated.sha256,
+          locked: true,
+        })
+        .select("id")
+        .single();
+      if (documentError) throw documentError;
+      documentId = generatedDocument.id;
+      generatedDocumentId = generatedDocument.id;
+    }
+
+    const link = await createInvoiceShareLink({
+      invoiceId: input.invoiceId,
+      documentId,
+    });
+    tokenHash = link.tokenHash;
+    const url = `${resolveAppUrl()}/public/invoices/${link.token}`;
+    logInvoiceDelivery("info", isResend ? "Invoice resend started" : "Invoice delivery started", input.invoiceId, input.method);
     results=await deliverPublicLink({
       documentType:"invoice",
       relatedRecordId:input.invoiceId,
-      url:signedUrl,
+      url,
       recipientName:[contact.first_name,contact.last_name].filter(Boolean).join(" "),
       email:contact.email,
       mobile:contact.mobile_phone,
       method:input.method,
       subject:`HASA Concepts Invoice ${invoice.invoice_number}`,
       message:`Invoice ${invoice.invoice_number} is available for review.`,
-      idempotencyKey:`invoice-${input.invoiceId}`,
+      idempotencyKey:`invoice-${input.invoiceId}-${link.tokenHash.slice(0, 24)}`,
     });
   } catch (caught) {
+    await cleanUpFailedInvoiceDelivery({
+      admin,
+      invoiceId: input.invoiceId,
+      method: input.method,
+      tokenHash,
+      generatedDocumentId,
+    });
     const message = caught instanceof Error ? caught.message : "The invoice could not be delivered.";
     logInvoiceDelivery("error", "Invoice delivery failed before completion", input.invoiceId, input.method, message);
     return {
       ok: false,
-      error: `${message} ${invoice.status === "draft"
-        ? "The invoice remains editable and unlocked."
-        : "The invoice remains issued and unsent."}`,
+      error: `${message} ${isResend
+        ? "The existing invoice and due date were not changed."
+        : invoice.status === "draft"
+          ? "The invoice remains editable and unlocked."
+          : "The invoice remains issued and unsent."}`,
     };
   }
 
   const delivered = results.some((result) => result.status === "sent" || result.status === "delivered");
   if (!delivered) {
+    await cleanUpFailedInvoiceDelivery({
+      admin,
+      invoiceId: input.invoiceId,
+      method: input.method,
+      tokenHash,
+      generatedDocumentId,
+    });
     const providerMessages = results
       .filter((result) => result.status === "failed")
       .map((result) => result.errorMessage)
@@ -145,10 +255,21 @@ export async function generateAndSendInvoiceAction(input:{
     logInvoiceDelivery("error", "Invoice delivery was rejected", input.invoiceId, input.method, message);
     return {
       ok: false,
-      error: `${message} Its due-date period has not started, and ${invoice.status === "draft"
-        ? "the invoice remains editable and unlocked."
-        : "the invoice remains issued and unsent."}`,
+      error: isResend
+        ? `${message} The existing invoice, due date, and prior link were not changed.`
+        : `${message} Its due-date period has not started, and ${invoice.status === "draft"
+          ? "the invoice remains editable and unlocked."
+          : "the invoice remains issued and unsent."}`,
     };
+  }
+
+  if (!tokenHash) throw new Error("The invoice delivery completed without a valid customer link.");
+  await activateInvoiceShareLink(input.invoiceId, tokenHash);
+
+  if (isResend) {
+    revalidatePath(`/billing/${input.invoiceId}`);
+    logInvoiceDelivery("info", "Invoice resent with a fresh 120-day link", input.invoiceId, input.method);
+    return { ok: true, results };
   }
 
   if (invoice.status === "draft") {
@@ -158,17 +279,6 @@ export async function generateAndSendInvoiceAction(input:{
       throw new Error("The customer delivery succeeded, but the invoice could not be finalized. Review the invoice before trying again.");
     }
   }
-
-  const { error: documentError } = await admin.from("generated_documents").insert({
-    document_type:"invoice",
-    related_record_id:input.invoiceId,
-    storage_path:generated.path,
-    original_filename:`${invoice.invoice_number}.pdf`,
-    mime_type:"application/pdf",
-    sha256_hash:generated.sha256,
-    locked:true,
-  });
-  if (documentError) throw documentError;
 
   const { data: sentInvoice, error: sentError } = await admin.from("invoices")
     .update({status:"sent",sent_at:sentAt.toISOString(),due_date:dueDate})

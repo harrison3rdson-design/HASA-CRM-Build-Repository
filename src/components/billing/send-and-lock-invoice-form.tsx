@@ -12,12 +12,14 @@ export function SendAndLockInvoiceForm({
   hasMobile,
   emailConfigured,
   smsConfigured,
+  mode = "send",
 }: {
   invoiceId: string;
   hasEmail: boolean;
   hasMobile: boolean;
   emailConfigured: boolean;
   smsConfigured: boolean;
+  mode?: "send" | "resend";
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -27,12 +29,14 @@ export function SendAndLockInvoiceForm({
   const defaultMethod: DeliveryMethod = canEmail && canSms ? "both" : canEmail ? "email" : "sms";
   const [method, setMethod] = useState<DeliveryMethod>(defaultMethod);
   const canSend = canEmail || canSms;
+  const isResend = mode === "resend";
 
   return (
     <div>
       <p className="footnote">
-        Preview the customer PDF first. A successful delivery locks the invoice and starts its payment-terms due-date period.
-        If delivery fails, a draft remains editable.
+        {isResend
+          ? "Resending issues a fresh customer link valid for 120 days. The locked invoice and its existing due date do not change."
+          : "Preview the customer PDF first. A successful delivery locks the invoice and starts its payment-terms due-date period. If delivery fails, a draft remains editable."}
       </p>
       <div className="button-row">
         <select
@@ -51,7 +55,9 @@ export function SendAndLockInvoiceForm({
           disabled={pending || !canSend}
           onClick={() => {
             const confirmed = window.confirm(
-              "Send this invoice to the customer? A successful delivery will lock the invoice and start its payment-terms due date."
+              isResend
+                ? "Resend this invoice to the customer with a fresh 120-day link?"
+                : "Send this invoice to the customer? A successful delivery will lock the invoice and start its payment-terms due date."
             );
             if (!confirmed) return;
 
@@ -70,7 +76,7 @@ export function SendAndLockInvoiceForm({
             });
           }}
         >
-          {pending ? "Sending…" : "Send and Lock Invoice"}
+          {pending ? "Sending…" : isResend ? "Resend Invoice" : "Send and Lock Invoice"}
         </button>
       </div>
       {!hasEmail && !hasMobile ? (

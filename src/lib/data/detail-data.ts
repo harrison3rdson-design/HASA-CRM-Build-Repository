@@ -5,16 +5,37 @@ export async function getClientDetail(clientId: string) {
   await Policies.internalRead();
   const s = createAdminClient();
 
-  const [{ data: client, error: clientError }, { data: contacts }, { data: proposals }, { data: projects }] =
+  const [
+    { data: client, error: clientError },
+    { data: contacts, error: contactsError },
+    { data: proposals, error: proposalsError },
+    { data: projects, error: projectsError },
+    { data: invoices, error: invoicesError },
+  ] =
     await Promise.all([
       s.from("clients").select("*").eq("id", clientId).single(),
       s.from("contacts").select("*").eq("client_id", clientId).order("is_primary", { ascending: false }),
       s.from("proposals").select("id,proposal_number,project_name,status,current_revision,created_at").eq("client_id", clientId).order("created_at", { ascending: false }),
       s.from("projects").select("id,project_number,project_name,status,authorized_fee").eq("client_id", clientId).order("project_number"),
+      s.from("invoices")
+        .select("id,invoice_number,invoice_date,due_date,invoice_type,status,total,amount_paid,balance_due,project:projects(project_number,project_name)")
+        .eq("client_id", clientId)
+        .order("invoice_date", { ascending: false })
+        .order("invoice_number", { ascending: false }),
     ]);
 
   if (clientError) throw clientError;
-  return { client, contacts: contacts ?? [], proposals: proposals ?? [], projects: projects ?? [] };
+  if (contactsError) throw contactsError;
+  if (proposalsError) throw proposalsError;
+  if (projectsError) throw projectsError;
+  if (invoicesError) throw invoicesError;
+  return {
+    client,
+    contacts: contacts ?? [],
+    proposals: proposals ?? [],
+    projects: projects ?? [],
+    invoices: invoices ?? [],
+  };
 }
 
 export async function getProposalDetail(proposalId: string) {

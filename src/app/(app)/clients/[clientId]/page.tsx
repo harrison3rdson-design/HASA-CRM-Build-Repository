@@ -58,6 +58,21 @@ export default async function ClientDetailPage({
         <div className="table-wrap"><table><thead><tr><th>Project</th><th>Name</th><th>Status</th><th>Authorized</th></tr></thead>
         <tbody>{d.projects.map((p:any)=><tr key={p.id}><td><a href={`/projects/${p.id}`}>{p.project_number}</a></td><td>{p.project_name}</td><td>{p.status}</td><td>{money(p.authorized_fee)}</td></tr>)}</tbody></table></div>
       </Panel>
+
+      <Panel title="Invoices">
+        {d.invoices.length ? (
+          <div className="table-wrap"><table><thead><tr><th>Invoice</th><th>Date</th><th>Project</th><th>Type</th><th>Total</th><th>Balance</th><th>Status</th></tr></thead>
+          <tbody>{d.invoices.map((invoice:any)=><tr key={invoice.id}>
+            <td><Link className="table-link" href={`/billing/${invoice.id}`}>{invoice.invoice_number}</Link></td>
+            <td>{invoice.invoice_date}</td>
+            <td>{invoice.project?.project_number ?? "Direct"}</td>
+            <td>{invoice.invoice_type === "standalone" ? "Direct" : String(invoice.invoice_type).replaceAll("_", " ")}</td>
+            <td>{money(invoice.total)}</td>
+            <td>{money(invoice.balance_due)}</td>
+            <td><span className="pill">{invoice.status}</span></td>
+          </tr>)}</tbody></table></div>
+        ) : <p className="muted">No invoices have been created for this client.</p>}
+      </Panel>
     </>
   );
 }

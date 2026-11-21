@@ -37,3 +37,23 @@ describe("client-scoped proposal creation", () => {
     expect(proposalForm).toContain("Client details inherited");
   });
 });
+
+describe("client invoice history", () => {
+  it("loads invoices by client and includes project context", () => {
+    const detailData = read("src/lib/data/detail-data.ts");
+
+    expect(detailData).toContain('s.from("invoices")');
+    expect(detailData).toContain('.eq("client_id", clientId)');
+    expect(detailData).toContain('project:projects(project_number,project_name)');
+  });
+
+  it("shows linked invoice totals, balances, and status on the client screen", () => {
+    const clientRoute = read("app/(app)/clients/[clientId]/page.tsx");
+
+    expect(clientRoute).toContain('<Panel title="Invoices">');
+    expect(clientRoute).toContain('href={`/billing/${invoice.id}`}');
+    expect(clientRoute).toContain("money(invoice.total)");
+    expect(clientRoute).toContain("money(invoice.balance_due)");
+    expect(clientRoute).toContain("No invoices have been created for this client.");
+  });
+});

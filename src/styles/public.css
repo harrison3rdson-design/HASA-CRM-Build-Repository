@@ -5,6 +5,9 @@ body{margin:0;background:var(--public-bg);color:var(--public-text);font-family:A
 .public-header{display:flex;justify-content:space-between;align-items:center;padding:18px 4px}
 .public-brand{display:grid;gap:5px}.public-brand-logo{display:block;width:240px;height:auto;border-radius:4px}.public-brand strong{font-size:22px}.public-brand span{font-size:11px;color:var(--public-muted);letter-spacing:.06em}
 .public-meta{font-size:12px;color:var(--public-muted);text-align:right}
+.public-document-actions{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px;padding:13px 14px;border:1px solid #9ec5e8;border-radius:12px;background:#edf7ff;color:#17324d;box-shadow:0 7px 18px rgba(23,54,79,.08)}
+.public-document-actions-copy{display:grid;gap:3px}.public-document-actions-copy strong{font-size:14px}.public-document-actions-copy span{font-size:12px;line-height:1.4}
+.public-document-action-button{flex:0 0 auto;min-height:44px;padding:10px 14px;border:1px solid #315d7d;border-radius:9px;background:#17364f;color:#fff;font:inherit;font-size:13px;font-weight:800;cursor:pointer}.public-document-action-button:hover{background:#0f2c43}.public-document-action-button:focus-visible{outline:3px solid #76add3;outline-offset:2px}
 .public-document,.public-acceptance-card{background:#fff;border:1px solid var(--public-border);border-radius:14px;padding:22px;margin-bottom:16px}
 .public-document h1{font-size:25px;margin:0 0 6px}.public-document h2{font-size:16px;margin:24px 0 8px}
 .public-muted{color:var(--public-muted)}.preline{white-space:pre-line}
@@ -81,7 +84,17 @@ body{margin:0;background:var(--public-bg);color:var(--public-text);font-family:A
 .public-invoice-link-shell{display:grid;min-height:100vh;place-items:center}.public-invoice-link-message{display:grid;width:100%;gap:28px;padding:34px}.public-invoice-link-message .public-brand-logo{width:min(260px,100%)}.public-invoice-link-message h1{margin:6px 0 10px;font-size:28px}.public-invoice-link-message .public-muted{margin:0;font-size:15px;line-height:1.6}.public-invoice-link-eyebrow{margin:0;color:#315d7d;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
 .public-acceptance-card fieldset+fieldset{margin-top:4px}
 @media(max-width:600px){
+  .public-document-actions{position:sticky;top:8px;z-index:20;gap:10px;padding:9px 10px}.public-document-actions-copy span{display:none}.public-document-action-button{min-height:46px;padding:10px 12px}
   .public-acceptance-heading{align-items:flex-start}.public-live-total{font-size:20px}
   .public-choice-card{grid-template-columns:auto minmax(0,1fr)}.public-choice-card>strong{grid-column:2}
   .public-choice-summary-grid{grid-template-columns:1fr}
+}
+@media print{
+  @page{margin:.5in}
+  body{background:#fff}
+  .public-shell{max-width:none;padding:0}
+  .public-document-actions,.public-primary,.public-processing{display:none!important}
+  .public-document,.public-acceptance-card{border:0;box-shadow:none}
+  .public-document{padding:0}
+  .public-acceptance-card{break-inside:avoid;page-break-inside:avoid}
 }

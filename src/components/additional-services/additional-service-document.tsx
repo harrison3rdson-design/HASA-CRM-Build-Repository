@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { money } from "@/lib/ui/format";
+import { PublicDocumentActions } from "@/components/public/public-document-actions";
 
 type AdditionalServiceDocumentProps = {
   authorization: {
@@ -58,6 +59,8 @@ export function AdditionalServiceDocument({ authorization, company }: Additional
         </div>
         <div className="public-meta">Authorization #{authorization.authorization_number}</div>
       </header>
+
+      <PublicDocumentActions documentName="authorization" />
 
       <article className="public-document">
         <h1>Additional Service Authorization</h1>

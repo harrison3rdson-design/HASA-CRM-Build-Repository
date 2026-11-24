@@ -7,6 +7,7 @@ import type { ServiceTerms } from "@/lib/services/terms";
 import { resolveDefaultProposalTerms } from "@/lib/proposal-terms";
 import type { ProposalAlternate } from "@/lib/proposal-alternates";
 import { ProposalRichContent } from "@/components/public/proposal-rich-content";
+import { PublicDocumentActions } from "@/components/public/public-document-actions";
 
 type ProposalDocumentProps = {
   revision: {
@@ -124,6 +125,8 @@ export function ProposalDocument({
           Proposal #{proposal.proposal_number} · {proposalRevisionLabel(revision.revision_number)}
         </div>
       </header>
+
+      <PublicDocumentActions documentName="proposal" />
 
       <article className="public-document">
         <h1>{proposal.project_name}</h1>

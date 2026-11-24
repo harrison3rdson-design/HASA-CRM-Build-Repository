@@ -13,6 +13,21 @@ describe("customer document previews and branding", () => {
       .toContain("/branding/hasa-logo-horizontal.jpeg");
   });
 
+  it("gives mobile customers a print or PDF-save action on both document types", () => {
+    const actions = source("src/components/public/public-document-actions.tsx");
+    const proposal = source("src/components/public/proposal-document.tsx");
+    const authorization = source("src/components/additional-services/additional-service-document.tsx");
+    const publicCss = source("src/styles/public.css");
+
+    expect(actions).toContain("Print / Save PDF");
+    expect(actions).toContain("window.print()");
+    expect(proposal).toContain('<PublicDocumentActions documentName="proposal" />');
+    expect(authorization).toContain('<PublicDocumentActions documentName="authorization" />');
+    expect(publicCss).toContain(".public-document-actions{position:sticky");
+    expect(publicCss).toContain("@media print");
+    expect(publicCss).toContain(".public-document-actions,.public-primary,.public-processing{display:none!important}");
+  });
+
   it("embeds the HASA logo in executed and invoice PDFs", () => {
     expect(source("src/lib/documents/executed-html.ts"))
       .toContain("hasaHorizontalLogoDataUri");
